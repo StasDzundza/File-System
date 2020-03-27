@@ -1,43 +1,29 @@
 #include "file_descriptor.h"
-#include <stdexcept>
 
-int FileDescriptor::getFileLength()const noexcept
-{
-	return file_length;
-}
+namespace filesystem::components {
 
-void FileDescriptor::increaseFileLength(const   int& length)
-{
-	//TODO throw exception when overflow
-	file_length += length;
-}
-
-void FileDescriptor::decreaseFileLength(const   int& length)
-{
-	if (file_length - length < 0) {
-		throw std::logic_error("File size can`t be less than 0");
+	int FileDescriptor::size(){
+		return sizeof(int) + sizeof(int)*constants::MAX_FILE_BLOCKS;
 	}
-	else {
-		file_length -= length;
-	}
-}
 
-void FileDescriptor::setFileLength(const   int& new_file_length)
-{
-	//TODO throw exception when overflow
-	file_length = new_file_length;
-}
-
-std::vector<int>& FileDescriptor::getDiskBlockNumbers()
-{
-	return disk_block_numbers;
-}
-
-void FileDescriptor::addDiskBlockNumber(const   int& disk_block_number){
-	if (disk_block_numbers_size < DISK_BLOCK_NUMBERS_MAX_LENGTH) {
-		disk_block_numbers[disk_block_numbers_size++] = disk_block_number;
+	bool FileDescriptor::readDescriptor(char* read_from, int bytes_read){
+		if (bytes_read < size()) {
+			return false;
+		}
+		else {
+			std::memcpy(&file_length, read_from, sizeof(int));
+			std::memcpy(arr_block_num, read_from + sizeof(int), sizeof(arr_block_num));
+			return true;
+		}
 	}
-	else {
-		throw std::runtime_error("Disk block overflow");
+
+	int FileDescriptor::getFileLength()
+	{
+		return file_length;
 	}
+
+	void FileDescriptor::setFileLength(int new_file_length){
+		file_length = new_file_length;
+	}
+
 }

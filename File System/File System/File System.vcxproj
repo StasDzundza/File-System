@@ -127,6 +127,7 @@
     <ClCompile Include="Directory.cpp" />
     <ClCompile Include="filesystem.cpp" />
     <ClCompile Include="file_descriptor.cpp" />
+    <ClCompile Include="IOSystem.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OFT.cpp" />
   </ItemGroup>
@@ -135,6 +136,7 @@
     <ClInclude Include="filesystem.h" />
     <ClInclude Include="file_descriptor.h" />
     <ClInclude Include="file_system_constants.h" />
+    <ClInclude Include="IOSystem.h" />
     <ClInclude Include="oft.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

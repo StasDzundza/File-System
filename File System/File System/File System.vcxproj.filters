@@ -36,6 +36,9 @@
     <ClCompile Include="OFT.cpp">
       <Filter>Исходные файлы\FileSystem</Filter>
     </ClCompile>
+    <ClCompile Include="IOSystem.cpp">
+      <Filter>Исходные файлы\FileSystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="directory.h">
@@ -51,6 +54,9 @@
       <Filter>Файлы заголовков\FileSystem</Filter>
     </ClInclude>
     <ClInclude Include="oft.h">
+      <Filter>Файлы заголовков\FileSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="IOSystem.h">
       <Filter>Файлы заголовков\FileSystem</Filter>
     </ClInclude>
   </ItemGroup>
