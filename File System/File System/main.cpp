@@ -1,9 +1,12 @@
 #include <iostream>
 #include "filesystem.h"
-
+#include "directory.h"
 int main() {
 	filesystem::FileSystem filesystem;
-	filesystem.create_file("myf2");
-	filesystem.create_file("myf1");
+	char arr[4]{ 'a','b','c','\0' };
+	filesystem.createFile(arr);
+	filesystem.createFile(arr);
+	
+	
 	return 0;
 }

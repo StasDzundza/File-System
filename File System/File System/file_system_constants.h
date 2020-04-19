@@ -8,5 +8,5 @@ namespace filesystem::constants {
 	static const int SYSTEM_BLOCKS_NUM = 6; // K
 	static const int DISC_BLOCK_SIZE = 64;//64 bytes
 	static const int MAX_FILE_BLOCKS = 3;
-	static const int MAIN_MEMORY_SIZE = 200;
+	static const int MAIN_MEMORY_SIZE = DISC_BLOCK_SIZE;
 }

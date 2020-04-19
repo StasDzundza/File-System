@@ -9,13 +9,22 @@ namespace filesystem::components {
 	class Directory
 	{
 	public:
+		class DirectoryEntry {
+		public:
+			DirectoryEntry() = default;
+			DirectoryEntry(char filename[constants::MAX_FILENAME_LENGTH], int descriptor_index);
+			char filename[constants::MAX_FILENAME_LENGTH];
+			int descriprot_idx = -1;
+		};
 		Directory();
-		void addFile(const char* filename, const int& descriptor_index);
+		void addFile(char filename[constants::MAX_FILENAME_LENGTH], int descriptor_index);
+		std::vector<DirectoryEntry> getFiles();
 		void removeFile(const char* filename);
-		void removeFile(const int& descriptor_index);
+		void removeFile(int descriptor_index);
 		int getNumberOfFiles()const noexcept;
+		int getDirectorySize()const noexcept;
 	private:
-		std::vector<std::pair<const char*, int>> files;
+		std::vector<DirectoryEntry> files;
 	};
 }
 

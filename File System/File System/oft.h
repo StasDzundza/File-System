@@ -16,10 +16,10 @@ namespace filesystem::components {
 			char* getReadWriteBuffer();
 
 			int getPosition() const noexcept;
-			void setPosition(const int& new_position) noexcept;
+			void setPosition(int new_position) noexcept;
 
 			int getDescriptorIndex()const noexcept;
-			void setDescriptorIndex(const int& descriptor_index) noexcept;
+			void setDescriptorIndex(int descriptor_index) noexcept;
 
 		private:
 
@@ -30,7 +30,11 @@ namespace filesystem::components {
 
 		OFT();
 
-		OFTEntry& operator[](const int& index);
+		OFTEntry& operator[](int index);
+
+		OFTEntry& getFile(int index);
+
+		void addFile(int file_descriptor);
 
 	private:
 

@@ -39,6 +39,9 @@
     <ClCompile Include="IOSystem.cpp">
       <Filter>Исходные файлы\FileSystem</Filter>
     </ClCompile>
+    <ClCompile Include="InputReader.cpp">
+      <Filter>Исходные файлы\FileSystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="directory.h">
@@ -57,6 +60,9 @@
       <Filter>Файлы заголовков\FileSystem</Filter>
     </ClInclude>
     <ClInclude Include="IOSystem.h">
+      <Filter>Файлы заголовков\FileSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="InputReader.h">
       <Filter>Файлы заголовков\FileSystem</Filter>
     </ClInclude>
   </ItemGroup>

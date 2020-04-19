@@ -23,12 +23,18 @@ namespace filesystem::components {
 
 	class FileDescriptor {
 	public:
+		FileDescriptor();
 		int size();
 		bool readDescriptor(char* read_from, int bytes_read);
 		int getFileLength();
 		void setFileLength(int new_file_length);
+		int getNumOfFreeBlocks();
+
+		void add_block(int idx);
+		int get_last_block()const;
+		const int* getArrBlockNums();
 	private:
-		int file_length;
+		int file_length = 0;
 		int arr_block_num[constants::MAX_FILE_BLOCKS];
 	};
 }
