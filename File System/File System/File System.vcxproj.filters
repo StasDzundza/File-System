@@ -24,9 +24,6 @@
     <ClCompile Include="main.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="Directory.cpp">
-      <Filter>Исходные файлы\FileSystem</Filter>
-    </ClCompile>
     <ClCompile Include="file_descriptor.cpp">
       <Filter>Исходные файлы\FileSystem</Filter>
     </ClCompile>
@@ -42,11 +39,11 @@
     <ClCompile Include="InputReader.cpp">
       <Filter>Исходные файлы\FileSystem</Filter>
     </ClCompile>
+    <ClCompile Include="directory_entry.cpp">
+      <Filter>Исходные файлы\FileSystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="directory.h">
-      <Filter>Файлы заголовков\FileSystem</Filter>
-    </ClInclude>
     <ClInclude Include="file_descriptor.h">
       <Filter>Файлы заголовков\FileSystem</Filter>
     </ClInclude>
@@ -63,6 +60,9 @@
       <Filter>Файлы заголовков\FileSystem</Filter>
     </ClInclude>
     <ClInclude Include="InputReader.h">
+      <Filter>Файлы заголовков\FileSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="directory_entry.h">
       <Filter>Файлы заголовков\FileSystem</Filter>
     </ClInclude>
   </ItemGroup>

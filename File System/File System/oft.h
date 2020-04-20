@@ -1,13 +1,14 @@
 #pragma once
 #include <vector>
 #include "file_system_constants.h"
+
 namespace filesystem::components {
 	class OFT {
 	public:
 
 		class OFTEntry {
 		public:
-			OFTEntry();
+			OFTEntry() = default;
 
 			OFTEntry(const OFTEntry& other_oft_entry);
 
@@ -22,7 +23,6 @@ namespace filesystem::components {
 			void setDescriptorIndex(int descriptor_index) noexcept;
 
 		private:
-
 			char read_write_buffer[constants::DISC_BLOCK_SIZE];
 			int position = 0;
 			int descriptor_index = 0;
@@ -35,6 +35,8 @@ namespace filesystem::components {
 		OFTEntry& getFile(int index);
 
 		void addFile(int file_descriptor);
+
+		bool findFile(int descriptor_index);
 
 	private:
 

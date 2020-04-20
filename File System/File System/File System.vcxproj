@@ -125,7 +125,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Directory.cpp" />
+    <ClCompile Include="directory_entry.cpp" />
     <ClCompile Include="filesystem.cpp" />
     <ClCompile Include="file_descriptor.cpp" />
     <ClCompile Include="InputReader.cpp" />
@@ -134,7 +134,7 @@
     <ClCompile Include="OFT.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="directory.h" />
+    <ClInclude Include="directory_entry.h" />
     <ClInclude Include="filesystem.h" />
     <ClInclude Include="file_descriptor.h" />
     <ClInclude Include="file_system_constants.h" />

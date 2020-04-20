@@ -1,5 +1,4 @@
 #include "file_descriptor.h"
-
 #include <algorithm>
 
 namespace filesystem::components {
@@ -7,23 +6,7 @@ namespace filesystem::components {
 		std::fill(arr_block_num, arr_block_num + constants::MAX_FILE_BLOCKS, -1);
 	}
 
-	int FileDescriptor::size(){
-		return sizeof(int) + sizeof(int)*constants::MAX_FILE_BLOCKS;
-	}
-
-	bool FileDescriptor::readDescriptor(char* read_from, int bytes_read){
-		if (bytes_read < size()) {
-			return false;
-		}
-		else {
-			std::memcpy(&file_length, read_from, sizeof(int));
-			std::memcpy(arr_block_num, read_from + sizeof(int), sizeof(arr_block_num));
-			return true;
-		}
-	}
-
-	int FileDescriptor::getFileLength()
-	{
+	int FileDescriptor::getFileLength()const{
 		return file_length;
 	}
 
@@ -31,8 +14,7 @@ namespace filesystem::components {
 		file_length = new_file_length;
 	}
 
-	int FileDescriptor::getNumOfFreeBlocks()
-	{
+	int FileDescriptor::getNumOfFreeBlocks()const{
 		int i = 0;
 		for (; i < constants::MAX_FILE_BLOCKS; i++) {
 			if (arr_block_num[i] == -1) {
@@ -42,7 +24,25 @@ namespace filesystem::components {
 		return constants::MAX_FILE_BLOCKS - i;
 	}
 
-	void FileDescriptor::add_block(int idx){
+	int FileDescriptor::getNumOfOccupiedBlocks() const{
+		int num_of_occupied_blocks = 0;
+		for (int block_num : arr_block_num) {
+			if (block_num != -1) {
+				num_of_occupied_blocks++;
+			}
+			else{
+				break;
+			}
+		}
+		return num_of_occupied_blocks;
+	}
+
+	void FileDescriptor::reset(){
+		file_length = -1;
+		std::fill(arr_block_num, arr_block_num + constants::MAX_FILE_BLOCKS, -1);
+	}
+
+	void FileDescriptor::addBlock(int idx){
 		if (getNumOfFreeBlocks() == 0) {
 			//throw exception
 		}
@@ -56,8 +56,7 @@ namespace filesystem::components {
 		}
 	}
 
-	int FileDescriptor::get_last_block() const
-	{
+	int FileDescriptor::getLastBlockNum() const{
 		for (int i = 0; i < constants::MAX_FILE_BLOCKS; i++) {
 			if (arr_block_num[i] == -1) {
 				if (i > 0) {
@@ -70,8 +69,7 @@ namespace filesystem::components {
 		}
 	}
 
-	const int* FileDescriptor::getArrBlockNums()
-	{
+	const int* FileDescriptor::getArrBlockNums()const{
 		return arr_block_num;
 	}
 

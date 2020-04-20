@@ -1,5 +1,7 @@
 #include "oft.h"
 #include <stdexcept>
+#include <algorithm>
+
 namespace filesystem::components {
 	OFT::OFT() {
 	}
@@ -15,8 +17,16 @@ namespace filesystem::components {
 		}
 	}
 
-	OFT::OFTEntry::OFTEntry() {
-
+	bool OFT::findFile(int descriptor_index){
+		auto it = std::find_if(oft.begin(), oft.end(), [descriptor_index](const OFTEntry& entry) {
+			if (entry.getDescriptorIndex() == descriptor_index) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		});
+		return it != oft.end();
 	}
 
 	OFT::OFTEntry& OFT::operator[](int index)
