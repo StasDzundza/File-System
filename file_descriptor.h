@@ -21,6 +21,8 @@ namespace filesystem::components {
 		int getLastBlockNum()const;
 
 		const int* getArrBlockNums()const;
+
+		void freeLastBlock();
 	private:
 		int file_length = -1;
 		int arr_block_num[constants::MAX_FILE_BLOCKS];

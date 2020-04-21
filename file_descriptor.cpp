@@ -73,4 +73,11 @@ namespace filesystem::components {
 		return arr_block_num;
 	}
 
+	void FileDescriptor::freeLastBlock(){
+		int lastBlock = getNumOfOccupiedBlocks() - 1;
+		if (lastBlock >= 0) {
+			arr_block_num[lastBlock] = -1;
+		}
+	}
+
 }
