@@ -46,6 +46,5 @@ namespace filesystem {
 		bool writeDataToDisk(const components::OFT::OFTEntry& open_file, const char*readFrom, int size);
 
 		char* readDataFromDisk(components::OFT::OFTEntry& open_file, int size);
-
 	};
 }
