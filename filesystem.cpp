@@ -48,6 +48,7 @@ namespace filesystem {
 					components::FileDescriptor file_descriptor;
 					file_descriptor.setFileLength(0);
 					setDescriptorByIndex(descriptor_idx, file_descriptor);
+					lseek(0, 0);
 					return FilesystemAnswer::SUCCESS;
 				}			
 				else {
