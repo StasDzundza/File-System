@@ -3,21 +3,20 @@
 #include <algorithm>
 
 namespace filesystem::components {
-	OFT::OFT() {
-	}
 
-	void OFT::addFile(int file_descriptor){
+	int OFT::addFile(int file_descriptor){
 		if (oft.size() < constants::MAX_NUMBER_OF_OPEN_FILES + 1) {
 			OFTEntry file;
 			file.setDescriptorIndex(file_descriptor);
 			oft.push_back(file);
+			return file_descriptor;
 		}
 		else {
 			throw std::logic_error("There are no space in OFT. Close some files.");
 		}
 	}
 
-	bool OFT::findFile(int descriptor_index){
+	OFT::OFTEntry* OFT::findFile(int descriptor_index){
 		auto it = std::find_if(oft.begin(), oft.end(), [descriptor_index](const OFTEntry& entry) {
 			if (entry.getDescriptorIndex() == descriptor_index) {
 				return true;
@@ -26,16 +25,11 @@ namespace filesystem::components {
 				return false;
 			}
 		});
-		return it != oft.end();
-	}
-
-	OFT::OFTEntry& OFT::operator[](int index)
-	{
-		if (index < oft.size()) {
-			return oft[index];
+		if (it != oft.end()) {
+			return &(*it);
 		}
 		else {
-			throw std::logic_error("Index out of bound");
+			return nullptr;
 		}
 	}
 

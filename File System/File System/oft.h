@@ -28,18 +28,13 @@ namespace filesystem::components {
 			int descriptor_index = 0;
 		};
 
-		OFT();
-
-		OFTEntry& operator[](int index);
-
 		OFTEntry& getFile(int index);
 
-		void addFile(int file_descriptor);
+		int addFile(int file_descriptor);
 
-		bool findFile(int descriptor_index);
+		OFTEntry* findFile(int descriptor_index);
 
 	private:
-
 		std::vector<OFTEntry> oft;
 	};
 }
