@@ -30,7 +30,7 @@ namespace filesystem::components {
 
 		OFTEntry& getFile(int index);
 
-		int addFile(int file_descriptor);
+		int addFile(int descriptor_index);
 
 		OFTEntry* findFile(int descriptor_index);
 

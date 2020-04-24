@@ -1,17 +1,39 @@
 #include "oft.h"
 #include <stdexcept>
+#include <algorithm>
+
 namespace filesystem::components {
-	OFT::OFT() {
-		//directory always opens on start with index 0;
-		OFTEntry directory;
-		oft.push_back(directory);
+
+	int OFT::addFile(int file_descriptor){
+		if (oft.size() < constants::MAX_NUMBER_OF_OPEN_FILES + 1) {
+			OFTEntry file;
+			file.setDescriptorIndex(file_descriptor);
+			oft.push_back(file);
+			return file_descriptor;
+		}
+		else {
+			throw std::logic_error("There are no space in OFT. Close some files.");
+		}
 	}
 
-	OFT::OFTEntry::OFTEntry() {
-
+	OFT::OFTEntry* OFT::findFile(int descriptor_index){
+		auto it = std::find_if(oft.begin(), oft.end(), [descriptor_index](const OFTEntry& entry) {
+			if (entry.getDescriptorIndex() == descriptor_index) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		});
+		if (it != oft.end()) {
+			return &(*it);
+		}
+		else {
+			return nullptr;
+		}
 	}
 
-	OFT::OFTEntry& OFT::operator[](const int& index)
+	OFT::OFTEntry& OFT::getFile(int index)
 	{
 		if (index < oft.size()) {
 			return oft[index];
@@ -50,7 +72,7 @@ namespace filesystem::components {
 		return position;
 	}
 
-	void OFT::OFTEntry::setPosition(const int& new_position) noexcept
+	void OFT::OFTEntry::setPosition(int new_position) noexcept
 	{
 		position = new_position;
 	}
@@ -60,7 +82,7 @@ namespace filesystem::components {
 		return descriptor_index;
 	}
 
-	void OFT::OFTEntry::setDescriptorIndex(const int& descriptor_index) noexcept {
+	void OFT::OFTEntry::setDescriptorIndex(int descriptor_index) noexcept {
 		this->descriptor_index = descriptor_index;
 	}
 }

@@ -34,16 +34,16 @@ namespace filesystem {
 		components::FileDescriptor getDescriptorByIndex(int idx);
 		bool setDescriptorByIndex(int idx,const components::FileDescriptor&fd);
 
-		void readBitmapFromDisk(std::bitset<constants::DISC_BLOCK_SIZE>& bitset);
-		void writeBitmapToDisk(const std::bitset<constants::DISC_BLOCK_SIZE>& bitset);
+		void readBitmapFromDisk(std::bitset<constants::BLOCKS_NUM>& bitset);
+		void writeBitmapToDisk(const std::bitset<constants::BLOCKS_NUM>& bitset);
 
-		int findFreeDiskBlock(const std::bitset<constants::DISC_BLOCK_SIZE>& bitset);
+		int findFreeDiskBlock(const std::bitset<constants::BLOCKS_NUM>& bitset);
 
 		std::pair<int,components::DirectoryEntry> findFileInDirectory(char filename[constants::MAX_FILENAME_LENGTH]);
 
 		bool writeToSystemDiskBlocks(int disk_block, int from, char*buf);
 
-		bool writeDataToDisk(const components::OFT::OFTEntry& open_file, const char*readFrom, int size);
+		bool writeDataToDisk(const components::OFT::OFTEntry& open_file, const char* readFrom, int size);
 
 		char* readDataFromDisk(components::OFT::OFTEntry& open_file, int size);
 	};

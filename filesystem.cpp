@@ -136,7 +136,7 @@ namespace filesystem {
 
 	/*
 		sets position in file to pos
-		returnsresult code
+		returns result code
 	*/
 	int FileSystem::lseek(int index, int pos)
 	{
@@ -247,7 +247,7 @@ namespace filesystem {
 	/*
 		reads bitmap from disk
 	*/
-	void FileSystem::readBitmapFromDisk(std::bitset<constants::DISC_BLOCK_SIZE>& bitset) {
+	void FileSystem::readBitmapFromDisk(std::bitset<constants::BLOCKS_NUM>& bitset) {
 		char tmp_buf[constants::DISC_BLOCK_SIZE];
 		ios->read_block(0, tmp_buf);
 		std::memcpy(&bitset, tmp_buf, sizeof(bitset));
@@ -256,7 +256,7 @@ namespace filesystem {
 	/*
 		writes bitmap to disk
 	*/
-	void FileSystem::writeBitmapToDisk(const std::bitset<constants::DISC_BLOCK_SIZE>& bitset) {
+	void FileSystem::writeBitmapToDisk(const std::bitset<constants::BLOCKS_NUM>& bitset) {
 		char tmp_buf[constants::DISC_BLOCK_SIZE];
 		std::memcpy(tmp_buf, &bitset, sizeof(bitset));
 		ios->write_block(0, tmp_buf);
@@ -307,9 +307,9 @@ namespace filesystem {
 		finds free space in disk with the help of bitset
 		returns -1 if there are no free space
 	*/
-	int FileSystem::findFreeDiskBlock(const std::bitset<constants::DISC_BLOCK_SIZE>& bitset){
+	int FileSystem::findFreeDiskBlock(const std::bitset<constants::BLOCKS_NUM>& bitset){
 		int free_disc_block = -1;
-		for (int i = constants::SYSTEM_BLOCKS_NUM; i < constants::DISC_BLOCK_SIZE; i++) {
+		for (int i = constants::SYSTEM_BLOCKS_NUM; i < constants::BLOCKS_NUM; i++) {
 			if (bitset[i] == 0) {
 				free_disc_block = i;
 				break;
