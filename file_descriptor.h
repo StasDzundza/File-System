@@ -1,34 +1,30 @@
 #pragma once
 #include <vector>
 #include "file_system_constants.h"
+
 namespace filesystem::components {
-	/*class FileDescriptor {
-	public:
-		int getFileLength()const noexcept;
-		void increaseFileLength(const   int& length);
-		void decreaseFileLength(const   int& length);
-		void setFileLength(const   int& new_length);
-
-		std::vector<int>& getDiskBlockNumbers();
-		void addDiskBlockNumber(const   int& disk_block_number);
-
-	private:
-		//in bytes
-		int file_length = 0;
-
-		static const int DISK_BLOCK_NUMBERS_MAX_LENGTH = 3;
-		std::vector<int> disk_block_numbers = { -1,-1,-1 };
-		int disk_block_numbers_size = 0;
-	};*/
 
 	class FileDescriptor {
 	public:
-		int size();
-		bool readDescriptor(char* read_from, int bytes_read);
-		int getFileLength();
+		FileDescriptor();
+
+		int getFileLength()const;
 		void setFileLength(int new_file_length);
+
+		int getNumOfFreeBlocks()const;
+		int getNumOfOccupiedBlocks()const;
+
+		void reset();
+
+		void addBlock(int idx);
+
+		int getLastBlockNum()const;
+
+		const int* getArrBlockNums()const;
+
+		void freeLastBlock();
 	private:
-		int file_length;
+		int file_length = -1;
 		int arr_block_num[constants::MAX_FILE_BLOCKS];
 	};
 }
