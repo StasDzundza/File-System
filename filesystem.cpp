@@ -127,7 +127,6 @@ namespace filesystem {
 				entry->block_read = true; // block isn't modified for sure
 			}
 
-			//if block space isn`t enough - write block to disk and read new
 			while (bytes + offset > BLOCK_SIZE) {
 				memcpy(entry->read_write_buffer + offset, read_from, BLOCK_SIZE - offset);
 				bytes -= BLOCK_SIZE - offset;
@@ -163,8 +162,9 @@ namespace filesystem {
 		if (fd->file_length + bytes <= BLOCK_SIZE * MAX_FILE_BLOCKS) {
 			int offset_in_last_block = fd->file_length % BLOCK_SIZE;
 			bytes -= (BLOCK_SIZE - offset_in_last_block);
-			int num_of_occupied_blocks = ceil(fd->file_length / BLOCK_SIZE);
-			int num_of_new_blocks = ceil(bytes / BLOCK_SIZE); // number of blocks we need to add
+			int num_of_occupied_blocks = ceil((double)fd->file_length / BLOCK_SIZE);
+			//calculate num of new blocks that we need
+			int num_of_new_blocks = ceil((double)bytes / BLOCK_SIZE);
 
 			if (num_of_new_blocks == 0) {
 				// No need to read the bitset, add any blocks
