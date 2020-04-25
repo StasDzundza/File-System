@@ -9,6 +9,9 @@ namespace filesystem::components {
 	}
 
 	OFTEntry* OFT::findFile(int fd_index){
+		if (fd_index <= 0 || fd_index > FD_OPENED_LIMIT)
+			return nullptr;
+
 		auto it = std::find_if(entries_buf.begin(), entries_buf.end(), 
 			[fd_index](const OFTEntry& entry) {
 				return entry.fd_index == fd_index;

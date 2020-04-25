@@ -13,10 +13,10 @@ using std::vector;
 namespace filesystem {
 	FileSystem::FileSystem() {
 		ios.init(SYSTEM_PATH);
-		initFileSystem();
+		_initFileSystem();
 	}
 
-	FileDescriptor FileSystem::getDescriptorByIndex(int fd_index) {
+	FileDescriptor FileSystem::_getDescriptorByIndex(int fd_index) {
 		// compute the descriptor offset
 		int bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor)*fd_index;
 		int read_block_idx = bytes/BLOCK_SIZE, shift = bytes % BLOCK_SIZE;
@@ -31,7 +31,7 @@ namespace filesystem {
 		Save filesystem data to disk: write bitmap, 
 		directory descriptor,empty file descriptors.
 	*/
-	void FileSystem::initFileSystem() {
+	void FileSystem::_initFileSystem() {
 		// TODO: Stas Dzundza
 		// Add restoring fileSystem options from IOSystem
 	
@@ -56,9 +56,9 @@ namespace filesystem {
 		// oft->addFile(0);
 	}
 
-	int FileSystem::readFromFile(OFTEntry* f_entry,  void* write_ptr, int bytes) {
+	int FileSystem::_readFromFile(OFTEntry* f_entry,  void* write_ptr, int bytes) {
 		// Check if file has enough bytes to read
-		FileDescriptor fd = getDescriptorByIndex(f_entry->fd_index);
+		FileDescriptor fd = _getDescriptorByIndex(f_entry->fd_index);
 		if (fd.file_length - f_entry->fpos < bytes) {
 			return EXIT_FAILURE;
 		}
@@ -110,12 +110,12 @@ namespace filesystem {
 		return EXIT_SUCCESS;
 	}
 
-	int FileSystem::writeToFile(OFTEntry* entry, void* read_ptr, int bytes)
+	int FileSystem::_writeToFile(OFTEntry* entry, void* read_ptr, int bytes)
 	{
-		FileDescriptor fd = getDescriptorByIndex(entry->fd_index);
+		FileDescriptor fd = _getDescriptorByIndex(entry->fd_index);
 		// before reading/writing blocks, we must ensure the file can store requsted bytes
 		// and allocate the necessary bytes
-		if (!reserveBytesForFile(&fd, bytes)) {
+		if (!_reserveBytesForFile(&fd, bytes)) {
 			return EXIT_FAILURE;
 		}
 		else {
@@ -156,7 +156,7 @@ namespace filesystem {
 		}
 	}
 
-	int FileSystem::reserveBytesForFile(FileDescriptor* fd, int bytes)
+	int FileSystem::_reserveBytesForFile(FileDescriptor* fd, int bytes)
 	{
 		//check if file can store requsted bytes
 		if (fd->file_length + bytes <= BLOCK_SIZE * MAX_FILE_BLOCKS) {
@@ -201,5 +201,23 @@ namespace filesystem {
 		else {
 			return EXIT_FAILURE;
 		}
+	}
+
+	int FileSystem::read(int fd_index, void* main_mem_ptr, int bytes) {
+		OFTEntry* oft_ptr;
+		if (bytes <= 0 && !(oft_ptr = oft.findFile(fd_index))) {
+			return EXIT_FAILURE;
+		}
+
+		return _readFromFile(oft_ptr, main_mem_ptr, bytes);
+	}
+
+	int FileSystem::write(int fd_index, void* main_mem_ptr, int bytes) {
+		OFTEntry* oft_ptr;
+		if (bytes <= 0 && !(oft_ptr = oft.findFile(fd_index))) {
+			return EXIT_FAILURE;
+		}
+
+		return _writeToFile(oft_ptr, main_mem_ptr, bytes);
 	}
 }

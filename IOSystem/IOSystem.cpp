@@ -13,7 +13,8 @@ namespace filesystem::io {
 	}
 
 	IOSystem::IOSystem()
-		: _blocks_num(DISC_BLOCKS_NUM), _block_len(BLOCK_SIZE) {
+		: _blocks_num(DISC_BLOCKS_NUM), _block_len(BLOCK_SIZE),
+		_system_state_path(nullptr) {
 	}
 
 	void IOSystem::init(const char *system_state_path) {
@@ -25,6 +26,8 @@ namespace filesystem::io {
 	}
 
 	IOSystem::~IOSystem() {
+		if (!_system_state_path)
+			return;
 		save_system_state();
 	}
 

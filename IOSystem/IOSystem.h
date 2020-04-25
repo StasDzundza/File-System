@@ -31,7 +31,7 @@ namespace filesystem::io {
 		// storage_path
 		void restore_system_state();
 
-	private:
+	protected:
 		int _blocks_num;
 		int _block_len;
 		char _ldisk[DISC_BLOCKS_NUM][BLOCK_SIZE];

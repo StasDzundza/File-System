@@ -15,14 +15,17 @@ namespace filesystem {
 	using namespace components;
 	class FileSystem {
 	private:
-		void initFileSystem();
+		void _initFileSystem();
 
-		FileDescriptor getDescriptorByIndex(int fd_index);
-		int readFromFile(OFTEntry* entry, void* write_ptr, int bytes);
-		int writeToFile(OFTEntry* entry, void* read_ptr, int bytes);
-		int reserveBytesForFile(FileDescriptor* fd, int bytes);
+		FileDescriptor _getDescriptorByIndex(int fd_index);
+		int _readFromFile(OFTEntry* entry, void* write_ptr, int bytes);
+		int _writeToFile(OFTEntry* entry, void* read_ptr, int bytes);
+		int _reserveBytesForFile(FileDescriptor* fd, int bytes);
 	public:
 		FileSystem();
+
+		int read(int fd_index, void* main_mem_ptr, int bytes);
+		int write(int fd_index, void* main_mem_ptr, int bytes);
 	private:
 		io::IOSystem ios;
 		OFT oft;
