@@ -1,12 +1,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "directory_entry.h"
-#include <stdexcept>
-#include <algorithm>
+#include <string.h>
 
 namespace filesystem::components {
-	DirectoryEntry::DirectoryEntry(char filename[constants::MAX_FILENAME_LENGTH], int descriptor_index){
-		std::strcpy(this->filename, filename);
-		this->descriprot_idx = descriptor_index;
+	DirectoryEntry::DirectoryEntry(char filename[constants::MAX_FILENAME_LENGTH], int fd_index){
+		strncpy(this->filename, filename, sizeof(filename));
+		this->fd_index = fd_index;
 	}
 }

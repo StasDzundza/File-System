@@ -4,26 +4,7 @@
 
 namespace filesystem::components {
 
-	class FileDescriptor {
-	public:
-		FileDescriptor();
-
-		int getFileLength()const;
-		void setFileLength(int new_file_length);
-
-		int getNumOfFreeBlocks()const;
-		int getNumOfOccupiedBlocks()const;
-
-		void reset();
-
-		void addBlock(int idx);
-
-		int getLastBlockNum()const;
-
-		const int* getArrBlockNums()const;
-
-		void freeLastBlock();
-	private:
+	struct FileDescriptor {
 		int file_length = -1;
 		int arr_block_num[constants::MAX_FILE_BLOCKS];
 	};
