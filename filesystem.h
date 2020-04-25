@@ -20,7 +20,7 @@ namespace filesystem {
 		FileDescriptor getDescriptorByIndex(int fd_index);
 		int readFromFile(OFTEntry* entry, void* write_ptr, int bytes);
 		int writeToFile(OFTEntry* entry, void* read_ptr, int bytes);
-		int allocateNewDiskBlocks(FileDescriptor* fd, int bytes);
+		int reserveBytesForFile(FileDescriptor* fd, int bytes);
 	public:
 		FileSystem();
 	private:

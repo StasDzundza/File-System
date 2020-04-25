@@ -16,6 +16,12 @@ namespace filesystem::disk_utils {
         RawDiskStream(ios, block_idx, shift) {
     }
 
+    RawDiskWriter::~RawDiskWriter() {
+        if (block_read) {
+            ios->write_block(block_idx, block_buf);
+        }
+    }
+
     void RawDiskWriter::flush() {
         ios->write_block(block_idx, block_buf);
         block_read = false;
@@ -43,15 +49,14 @@ namespace filesystem::disk_utils {
             block_idx += 1; block_read = false;
 		}
 
-        if (bytes) {
-            while (bytes >= BLOCK_SIZE) {
-                ios->write_block(block_idx, read_from);
-                block_idx += 1;
-                read_from += BLOCK_SIZE; bytes -= BLOCK_SIZE;
-            }
+        while (bytes >= BLOCK_SIZE) {
+            ios->write_block(block_idx, read_from);
+            block_idx += 1;
+            read_from += BLOCK_SIZE; bytes -= BLOCK_SIZE;
         }
 
         if (bytes) {
+            block_read = true;
             memcpy(block_buf, read_from, bytes);
             shift = bytes;
         }
@@ -86,12 +91,11 @@ namespace filesystem::disk_utils {
             block_idx += 1; block_read = false;
 		}
 
-        if (bytes) {
-            while (bytes >= BLOCK_SIZE) {
-                ios->read_block(block_idx, write_to); block_idx += 1;
-                write_to += BLOCK_SIZE; bytes -= BLOCK_SIZE;
-            }
+        while (bytes >= BLOCK_SIZE) {
+            ios->read_block(block_idx, write_to); block_idx += 1;
+            write_to += BLOCK_SIZE; bytes -= BLOCK_SIZE;
         }
+
         if (bytes) {
             ios->read_block(block_idx, block_buf);
             block_read = true;

@@ -19,6 +19,7 @@ namespace filesystem::disk_utils {
     class RawDiskWriter : public RawDiskStream {
     public:
         RawDiskWriter(io::IOSystem* ios, int block_idx, int shift);
+        ~RawDiskWriter();
 
         void flush();
         void write(void* read_ptr, int bytes);

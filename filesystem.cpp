@@ -38,7 +38,7 @@ namespace filesystem {
 		disk_utils::RawDiskWriter fout(&ios, 0, 0);
 
 		// mark first k first bits as occupied
-		int range = (1 << SYSTEM_BLOCKS_NUM + 1) - 1; 
+		int range = (1 << SYSTEM_BLOCKS_NUM) - 1;
 		std::bitset<DISC_BLOCKS_NUM> free_blocks_set(range);
 		fout.write(&free_blocks_set, sizeof(free_blocks_set));
 
@@ -51,7 +51,6 @@ namespace filesystem {
 		FileDescriptor f_descriptor;
 		for(int i = 0; i < FD_CREATED_LIMIT; ++i)
 			fout.write(&f_descriptor, sizeof(f_descriptor));
-		fout.flush();
 
 		// Init directory ??!! TODO: Stas Dzundza
 		// oft->addFile(0);
@@ -92,16 +91,17 @@ namespace filesystem {
 			arr_block_idx += 1; f_entry->block_read = false;
 		}
 
-		if (bytes) {
-			// Left bytes to read
-			while (bytes > BLOCK_SIZE) {
-				// Here we may use external call where we pass f_entry->read_write_buffer
-				ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
-				f_entry->fpos += BLOCK_SIZE; arr_block_idx += 1;
+		// Left bytes to read
+		while (bytes >= BLOCK_SIZE) {
+			// Here we may use external call where we pass f_entry->read_write_buffer
+			ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+			f_entry->fpos += BLOCK_SIZE; arr_block_idx += 1;
 
-				memcpy(write_to, f_entry->read_write_buffer, BLOCK_SIZE);
-				write_to += BLOCK_SIZE; bytes -= BLOCK_SIZE;
-			}
+			memcpy(write_to, f_entry->read_write_buffer, BLOCK_SIZE);
+			write_to += BLOCK_SIZE; bytes -= BLOCK_SIZE;
+		}
+
+		if (bytes) {
 			// read remaining portion and buffer
 			ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
 			memcpy(write_to, f_entry->read_write_buffer, bytes);
@@ -113,7 +113,9 @@ namespace filesystem {
 	int FileSystem::writeToFile(OFTEntry* entry, void* read_ptr, int bytes)
 	{
 		FileDescriptor fd = getDescriptorByIndex(entry->fd_index);
-		if(fd.file_length + bytes < BLOCK_SIZE* MAX_FILE_BLOCKS) {
+		// before reading/writing blocks, we must ensure the file can store requsted bytes
+		// and allocate the necessary bytes
+		if (!reserveBytesForFile(&fd, bytes)) {
 			return EXIT_FAILURE;
 		}
 		else {
@@ -125,35 +127,29 @@ namespace filesystem {
 				entry->block_read = true; // block isn't modified for sure
 			}
 
-			int pos_diff = fd.file_length - entry->fpos;
-			//calculate how many new space we need
-			int new_bytes_need = bytes - pos_diff;
-			int num_of_occupied_blocks = ceil(fd.file_length / BLOCK_SIZE);
-			int size_of_occupied_blocks = num_of_occupied_blocks * BLOCK_SIZE;
-			if (fd.file_length + new_bytes_need > size_of_occupied_blocks) {
-				//allocate new space in disk if we don`t have enought
-				bool new_blocks_allocated = allocateNewDiskBlocks(&fd, new_bytes_need);
-				if (!new_blocks_allocated) {
-					return EXIT_FAILURE;
-				}
-			}
-
-			//if block space isn`t enought - write block to disk and read new
+			//if block space isn`t enough - write block to disk and read new
 			while (bytes + offset > BLOCK_SIZE) {
 				memcpy(entry->read_write_buffer + offset, read_from, BLOCK_SIZE - offset);
 				bytes -= BLOCK_SIZE - offset;
 				entry->fpos += BLOCK_SIZE - offset;
 				read_from += BLOCK_SIZE - offset;
 				offset = 0;
+
 				ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
 				arr_block_idx++;
 				ios.read_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
 			}
-			//if block space is enought - write data to buffer and dont write to disk
+
+			//if block space is enough - write data to buffer and don't write to disk
 			memcpy(entry->read_write_buffer + offset, read_from, bytes);
+			if (bytes == BLOCK_SIZE) {
+				ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
+				entry->block_read = false;
+			} else {
+				entry->block_read = true; entry->block_modified = true;
+			}
+
 			entry->fpos += bytes;
-			entry->block_read = true;
-			entry->block_modified = true;
 			if (entry->fpos > fd.file_length) {
 				fd.file_length = entry->fpos;
 			}
@@ -161,18 +157,24 @@ namespace filesystem {
 		}
 	}
 
-	int FileSystem::allocateNewDiskBlocks(FileDescriptor* fd, int bytes)
+	int FileSystem::reserveBytesForFile(FileDescriptor* fd, int bytes)
 	{
-		//check if we have asked space
+		//check if file can store requsted bytes
 		if (fd->file_length + bytes <= BLOCK_SIZE * MAX_FILE_BLOCKS) {
-			std::bitset<DISC_BLOCKS_NUM> free_blocks_set;
-			disk_utils::RawDiskReader fin(&ios, 0, 0);
-			fin.read(&free_blocks_set, sizeof(free_blocks_set));
 			int offset_in_last_block = fd->file_length % BLOCK_SIZE;
 			bytes -= (BLOCK_SIZE - offset_in_last_block);
 			int num_of_occupied_blocks = ceil(fd->file_length / BLOCK_SIZE);
-			//calculate num of new blocks that we need
-			int num_of_new_blocks = ceil(bytes / BLOCK_SIZE); 
+			int num_of_new_blocks = ceil(bytes / BLOCK_SIZE); // number of blocks we need to add
+
+			if (num_of_new_blocks == 0) {
+				// No need to read the bitset, add any blocks
+				return EXIT_SUCCESS;
+			}
+
+			std::bitset<DISC_BLOCKS_NUM> free_blocks_set;
+			disk_utils::RawDiskReader fin(&ios, 0, 0);
+			fin.read(&free_blocks_set, sizeof(free_blocks_set));
+
 			vector<int>free_blocks_idx;
 			for (int i = SYSTEM_BLOCKS_NUM; i < DISC_BLOCKS_NUM; i++) {
 				if (free_blocks_idx.size() == num_of_new_blocks) {
@@ -190,7 +192,6 @@ namespace filesystem {
 				}
 				disk_utils::RawDiskWriter fout(&ios, 0, 0);
 				fout.write(&free_blocks_set, sizeof(free_blocks_set));
-				fout.flush();
 				return EXIT_SUCCESS;
 			}
 			else {
