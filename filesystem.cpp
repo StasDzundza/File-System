@@ -128,7 +128,7 @@ namespace filesystem {
 			int pos_diff = fd.file_length - entry->fpos;
 			//calculate how many new space we need
 			int new_bytes_need = bytes - pos_diff;
-			int num_of_occupied_blocks = ceil(fd.file_length / BLOCK_SIZE);
+			int num_of_occupied_blocks = ceil((double)fd.file_length / BLOCK_SIZE);
 			int size_of_occupied_blocks = num_of_occupied_blocks * BLOCK_SIZE;
 			if (fd.file_length + new_bytes_need > size_of_occupied_blocks) {
 				//allocate new space in disk if we don`t have enought
@@ -170,9 +170,9 @@ namespace filesystem {
 			fin.read(&free_blocks_set, sizeof(free_blocks_set));
 			int offset_in_last_block = fd->file_length % BLOCK_SIZE;
 			bytes -= (BLOCK_SIZE - offset_in_last_block);
-			int num_of_occupied_blocks = ceil(fd->file_length / BLOCK_SIZE);
+			int num_of_occupied_blocks = ceil((double)fd->file_length / BLOCK_SIZE);
 			//calculate num of new blocks that we need
-			int num_of_new_blocks = ceil(bytes / BLOCK_SIZE); 
+			int num_of_new_blocks = ceil((double)bytes / BLOCK_SIZE);
 			vector<int>free_blocks_idx;
 			for (int i = SYSTEM_BLOCKS_NUM; i < DISC_BLOCKS_NUM; i++) {
 				if (free_blocks_idx.size() == num_of_new_blocks) {
