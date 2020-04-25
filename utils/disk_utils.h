@@ -1,9 +1,11 @@
 #pragma once
 
+#include "../fs_config.h"
 namespace filesystem::io {
     class IOSystem;
 }
 namespace filesystem::disk_utils {
+	using namespace config;
     class RawDiskStream {
     public:
         RawDiskStream(io::IOSystem* ios, int block_idx, int shift);

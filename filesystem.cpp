@@ -2,10 +2,12 @@
 #include "filesystem.h"
 #include "components/file_descriptor.h"
 #include "utils/disk_utils.h"
-#include "utils/file_utils.h"
 #include "fs_config.h"
 
+#include <cmath>
 #include <bitset>
+using std::min;
+
 namespace filesystem {
 	FileSystem::FileSystem() {
 		ios.init(SYSTEM_PATH);
@@ -53,69 +55,56 @@ namespace filesystem {
 		// oft->addFile(0);
 	}
 
-	void FileSystem::writeToFile(OFTEntry* entry, void* read_from, int bytes) {
-		disk_utils::RawDiskReader fin(&ios, 0, 0);
-
-		std::bitset<DISC_BLOCKS_NUM> free_blocks_set;
-		fin.read(&free_blocks_set, sizeof(free_blocks_set));
-
-		// TODO: Hlib Pylypets
-		// Come up with the idea of writing to files
-	}
-
-	int FileSystem::createFile(char filename[MAX_FILENAME_LENGTH]) {
-		FileDescriptor fd_dir = getDescriptorByIndex(0);
-		int num_files_created = fd_dir.file_length / sizeof(DirectoryEntry);
-
-		if (num_files_created == FD_CREATED_LIMIT || findFileInDir(filename))
+	int FileSystem::readFromFile(OFTEntry* f_entry,  void* write_ptr, int bytes) {
+		// Check if file has enough bytes to read
+		FileDescriptor fd = getDescriptorByIndex(f_entry->fd_index);
+		if (fd.file_length - f_entry->fpos < bytes) {
 			return EXIT_FAILURE;
+		}
 
-		// compute the offset before looking for empty descriptor
-		int bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor);
-		int block_idx = bytes/BLOCK_SIZE, shift = bytes % BLOCK_SIZE;
-		disk_utils::RawDiskReader fin(&ios, block_idx, shift);
-		
-		FileDescriptor free_fd;
-		int free_fd_index = 0;
-		for(int i = 0; i < FD_CREATED_LIMIT; ++i) {
-			fin.read(&free_fd, sizeof(components::FileDescriptor));
+		char* write_to = static_cast<char*>(write_ptr);
+		int arr_block_idx = f_entry->fpos/BLOCK_SIZE, shift = f_entry->fpos % BLOCK_SIZE;
+		if (!f_entry->block_read) {
+			// if block isn't read yet, read the respective block
+			ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+			f_entry->block_read = true; // block isn't modified for sure
+		}
 
-			if (free_fd.file_length == -1) {
-				// file descriptor isn't occupie
-				free_fd_index = i+1;
-				free_fd.file_length = 0;
-				break;
+		if (shift) {
+            int prefix_size = min(BLOCK_SIZE-shift, bytes);
+			memcpy(write_to, f_entry->read_write_buffer + shift, prefix_size);
+			write_to += prefix_size; bytes -= prefix_size;
+
+			f_entry->fpos += prefix_size;
+            shift = (shift + prefix_size) % BLOCK_SIZE;
+            if(shift) {
+                // bytes < BLOCK_SIZE - shift
+				return EXIT_SUCCESS;
 			}
-		}
-		if (!free_fd_index) {
-			// Internal error
-			return EXIT_FAILURE;
-		}
-		
-		DirectoryEntry new_entry(free_fd_index, filename);
 
-		OFTEntry* dir = oft.getFile(0);
-		dir->fpos = num_files_created*sizeof(DirectoryEntry);
+			if (f_entry->block_modified) {
+				// write the buffer into the appropriate block on disk (if modified),
+				ios.write_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+				f_entry->block_modified = false;
+			}
+			arr_block_idx += 1; f_entry->block_read = false;
+		}
 
-		writeToFile(dir, &new_entry, sizeof(DirectoryEntry));
+		if (bytes) {
+			// Left bytes to read
+			while (bytes > BLOCK_SIZE) {
+				// Here we may use external call where we pass f_entry->read_write_buffer
+				ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+				f_entry->fpos += BLOCK_SIZE; arr_block_idx += 1;
+
+				memcpy(write_to, f_entry->read_write_buffer, BLOCK_SIZE);
+				write_to += BLOCK_SIZE; bytes -= BLOCK_SIZE;
+			}
+			// read remaining portion and buffer
+			ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+			memcpy(write_to, f_entry->read_write_buffer, bytes);
+			f_entry->fpos += bytes; f_entry->block_read = true;
+		}
 		return EXIT_SUCCESS;
-	}
-
-	std::optional<DirectoryEntry> FileSystem::findFileInDir(char filename[MAX_FILENAME_LENGTH]) {
-		OFTEntry* directory = oft.getFile(0);
-		directory->fpos = 0;
-		
-		FileDescriptor fd_dir = getDescriptorByIndex(0);
-		int num_files_created = fd_dir.file_length / sizeof(DirectoryEntry);
-		file_utils::FileReader fin(&ios, directory, fd_dir);
-	
-		DirectoryEntry dir_entry;
-		for(int i = 0; i < num_files_created; ++i) {
-			fin.read(&dir_entry, sizeof(DirectoryEntry));
-
-			if(!strncmp(dir_entry.filename, filename, MAX_FILENAME_LENGTH))
-				return std::nullopt;
-		}
-		return dir_entry;
 	}
 }

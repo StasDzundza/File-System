@@ -1,15 +1,13 @@
 
 #include "disk_utils.h"
 
-#include <cmath>
+#include <algorithm>
 #include <string.h>
 using std::min;
 
-#include "../fs_config.h"
-#include "../IO_system/IOSystem.h"
+#include "../IOSystem/IOSystem.h"
 
 namespace filesystem::disk_utils {
-    using namespace config;
     RawDiskStream::RawDiskStream(io::IOSystem* ios, int block_idx, int shift) :
         ios(ios), block_idx(block_idx), shift(shift), block_read(false) {
     }

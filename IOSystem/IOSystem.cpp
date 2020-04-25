@@ -14,7 +14,6 @@ namespace filesystem::io {
 
 	IOSystem::IOSystem()
 		: _blocks_num(DISC_BLOCKS_NUM), _block_len(BLOCK_SIZE) {
-
 	}
 
 	void IOSystem::init(const char *system_state_path) {

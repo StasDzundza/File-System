@@ -5,10 +5,10 @@
 #include <optional>
 
 #include "oft.h"
-#include "IO_system/IOSystem.h"
-#include "directory_entry.h"
+#include "IOSystem/IOSystem.h"
+#include "components/directory_entry.h"
 #include "fs_config.h"
-#include "file_descriptor.h"
+#include "components/file_descriptor.h"
 
 namespace filesystem {
 	using namespace config;
@@ -16,13 +16,11 @@ namespace filesystem {
 	class FileSystem {
 	private:
 		void initFileSystem();
-		std::optional<DirectoryEntry> findFileInDir(char filename[MAX_FILENAME_LENGTH]);
 
 		FileDescriptor getDescriptorByIndex(int fd_index);
-		void writeToFile(OFTEntry* entry, void* read_from, int bytes);
+		int readFromFile(OFTEntry* entry, void* write_ptr, int bytes);
 	public:
 		FileSystem();
-		int createFile(char filename[MAX_FILENAME_LENGTH]);
 	private:
 		io::IOSystem ios;
 		OFT oft;

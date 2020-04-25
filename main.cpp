@@ -2,6 +2,6 @@
 #include "filesystem.h"
 
 int main() {
-	filesystem::FileSystem filesystem;
+	filesystem::FileSystem fs;
 	return 0;
 }

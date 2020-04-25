@@ -3,6 +3,11 @@
 #include <algorithm>
 
 namespace filesystem::components {
+	OFTEntry::OFTEntry() :
+		fpos(0), fd_index(0), 
+		block_read(false), block_modified(false) {
+	}
+
 	OFTEntry* OFT::findFile(int fd_index){
 		auto it = std::find_if(entries_buf.begin(), entries_buf.end(), 
 			[fd_index](const OFTEntry& entry) {
