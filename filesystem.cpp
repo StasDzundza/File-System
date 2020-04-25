@@ -6,7 +6,9 @@
 
 #include <cmath>
 #include <bitset>
+#include <vector>
 using std::min;
+using std::vector;
 
 namespace filesystem {
 	FileSystem::FileSystem() {
@@ -106,5 +108,97 @@ namespace filesystem {
 			f_entry->fpos += bytes; f_entry->block_read = true;
 		}
 		return EXIT_SUCCESS;
+	}
+
+	int FileSystem::writeToFile(OFTEntry* entry, void* read_ptr, int bytes)
+	{
+		FileDescriptor fd = getDescriptorByIndex(entry->fd_index);
+		if(fd.file_length + bytes < BLOCK_SIZE* MAX_FILE_BLOCKS) {
+			return EXIT_FAILURE;
+		}
+		else {
+			char* read_from = static_cast<char*>(read_ptr);
+			int arr_block_idx = entry->fpos / BLOCK_SIZE, offset = entry->fpos % BLOCK_SIZE;
+			if (!entry->block_read) {
+				// if block isn't read yet, read the respective block
+				ios.read_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
+				entry->block_read = true; // block isn't modified for sure
+			}
+
+			int pos_diff = fd.file_length - entry->fpos;
+			//calculate how many new space we need
+			int new_bytes_need = bytes - pos_diff;
+			int num_of_occupied_blocks = ceil(fd.file_length / BLOCK_SIZE);
+			int size_of_occupied_blocks = num_of_occupied_blocks * BLOCK_SIZE;
+			if (fd.file_length + new_bytes_need > size_of_occupied_blocks) {
+				//allocate new space in disk if we don`t have enought
+				bool new_blocks_allocated = allocateNewDiskBlocks(&fd, new_bytes_need);
+				if (!new_blocks_allocated) {
+					return EXIT_FAILURE;
+				}
+			}
+
+			//if block space isn`t enought - write block to disk and read new
+			while (bytes + offset > BLOCK_SIZE) {
+				memcpy(entry->read_write_buffer + offset, read_from, BLOCK_SIZE - offset);
+				bytes -= BLOCK_SIZE - offset;
+				entry->fpos += BLOCK_SIZE - offset;
+				read_from += BLOCK_SIZE - offset;
+				offset = 0;
+				ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
+				arr_block_idx++;
+				ios.read_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
+			}
+			//if block space is enought - write data to buffer and dont write to disk
+			memcpy(entry->read_write_buffer + offset, read_from, bytes);
+			entry->fpos += bytes;
+			entry->block_read = true;
+			entry->block_modified = true;
+			if (entry->fpos > fd.file_length) {
+				fd.file_length = entry->fpos;
+			}
+			return EXIT_SUCCESS;
+		}
+	}
+
+	int FileSystem::allocateNewDiskBlocks(FileDescriptor* fd, int bytes)
+	{
+		//check if we have asked space
+		if (fd->file_length + bytes <= BLOCK_SIZE * MAX_FILE_BLOCKS) {
+			std::bitset<DISC_BLOCKS_NUM> free_blocks_set;
+			disk_utils::RawDiskReader fin(&ios, 0, 0);
+			fin.read(&free_blocks_set, sizeof(free_blocks_set));
+			int offset_in_last_block = fd->file_length % BLOCK_SIZE;
+			bytes -= (BLOCK_SIZE - offset_in_last_block);
+			int num_of_occupied_blocks = ceil(fd->file_length / BLOCK_SIZE);
+			//calculate num of new blocks that we need
+			int num_of_new_blocks = ceil(bytes / BLOCK_SIZE); 
+			vector<int>free_blocks_idx;
+			for (int i = SYSTEM_BLOCKS_NUM; i < DISC_BLOCKS_NUM; i++) {
+				if (free_blocks_idx.size() == num_of_new_blocks) {
+					break;
+				}
+				else if (free_blocks_set[i] == 0) {
+					free_blocks_idx.push_back(i);
+				}
+			}
+			//if we found all blocks that we need - reserve it
+			if (free_blocks_idx.size() == num_of_new_blocks) {
+				for (int i : free_blocks_idx) {
+					fd->arr_block_num[num_of_occupied_blocks++] = i;
+					free_blocks_set[i] = 1;
+				}
+				disk_utils::RawDiskWriter fout(&ios, 0, 0);
+				fout.write(&free_blocks_set, sizeof(free_blocks_set));
+				fout.flush();
+				return EXIT_SUCCESS;
+			}
+			else {
+				return EXIT_FAILURE;
+			}
+		}
+		else {
+			return EXIT_FAILURE;
+		}
 	}
 }
