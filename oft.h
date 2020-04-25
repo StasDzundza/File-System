@@ -1,20 +1,25 @@
 #pragma once
 
 #include <array>
-#include "file_system_constants.h"
+#include "fs_config.h"
 
 namespace filesystem::components {
+	using namespace config;
+	struct OFTEntry {
+		char read_write_buffer[BLOCK_SIZE];
+		int fpos = 0;
+		int fd_index = 0;
+	};
 	class OFT {
 	public:
-		struct OFTEntry {
-			char read_write_buffer[constants::BLOCK_SIZE];
-			int fpos = 0;
-			int fd_index = 0;
-		};
-
 		OFTEntry* findFile(int fd_index);
-		OFTEntry* getFile(int opened_fd_index);
+		OFTEntry* getFile(int oft_index);
 	private:
-		std::array<OFTEntry, constants::FD_OPENED_LIMIT> entries_buf;
+		std::array<OFTEntry, FD_OPENED_LIMIT> entries_buf;
 	};
+	/* There is an open file table (OFT) maintained by the file system. This is a fixed length
+	array (declared as part of your file system), where each entry has the following form:
+	• Read/write buffer
+	• Current position
+	• File descriptor index */
 }
