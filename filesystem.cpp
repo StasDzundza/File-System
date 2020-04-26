@@ -377,10 +377,27 @@ namespace filesystem {
 	{
 		std::pair<DirectoryEntry, int> file = _findFileInDirectory(filename);
 		if (file.second == -1) return -1;
-		DirectoryEntry dir_entry = file.first;
-		if (oft.addBlock(dir_entry.fd_index) == EXIT_FAILURE) return-1;
-		int curr_pos = oft.addFile(dir_entry.fd_index);
-		ios.read_block(_getDescriptorByIndex(dir_entry.fd_index).arr_block_num[0], oft.getFile(dir_entry.fd_index)->read_write_buffer);
-		return dir_entry.fd_index;
+		int fd_index = file.first.fd_index;
+		if (oft.addFile(fd_index) == EXIT_FAILURE) return-1;
+		FileDescriptor fd = _getDescriptorByIndex(fd_index);
+		if (fd.file_length != 0) {
+			ios.read_block(fd.arr_block_num[0], oft.getFile(fd_index)->read_write_buffer);
+			oft.findFile(fd_index)->block_read = true;
+		}
+		return fd_index;
+	}
+
+	int FileSystem::close(int fd_index)
+	{
+		OFTEntry* file_entry = oft.findFile(fd_index);
+		if (!file_entry) {
+			return EXIT_FAILURE;
+		}
+		FileDescriptor fd = _getDescriptorByIndex(fd_index);
+		if (file_entry->block_modified) {
+			ios.write_block(fd.arr_block_num[file_entry->fpos/BLOCK_SIZE], file_entry->read_write_buffer);
+		}
+		oft.removeFile(fd_index);
+		return EXIT_SUCCESS;
 	}
 }

@@ -30,6 +30,7 @@ namespace filesystem {
 		int write(int fd_index, void* main_mem_ptr, int bytes);
 		int lseek(int fd_index, int pos);
 		int open(char filename[MAX_FILENAME_LENGTH]);
+		int close(int fd_index);
 	private:
 		io::IOSystem ios;
 		OFT oft;
