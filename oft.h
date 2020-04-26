@@ -19,6 +19,7 @@ namespace filesystem::components {
 		int addFile(int fd_index);
 		int removeFile(int fd_index);
 	private:
+		int oft_size = 0;
 		std::array<OFTEntry, FD_OPENED_LIMIT> entries_buf;
 	};
 }
