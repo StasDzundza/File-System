@@ -116,7 +116,7 @@ namespace filesystem {
 		// before reading/writing blocks, we must ensure the file can store requsted bytes
 		// and allocate the necessary bytes
 		int bytes_to_alloc = max(0, bytes - fd.file_length + entry->fpos);
-		if (!_reserveBytesForFile(&fd, bytes_to_alloc)) {
+		if (_reserveBytesForFile(&fd, bytes_to_alloc) == EXIT_FAILURE) {
 			return EXIT_FAILURE;
 		}
 		else {
@@ -257,8 +257,16 @@ namespace filesystem {
 		OFTEntry* dir = oft.findFile(0);
 		lseek(0, num_files_created * sizeof(DirectoryEntry));
 
-		_writeToFile(dir, &new_entry, sizeof(DirectoryEntry));
-		return EXIT_SUCCESS;
+		if (_writeToFile(dir, &new_entry, sizeof(DirectoryEntry)) == EXIT_SUCCESS) {
+			bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor)*free_fd_index;
+			int free_fd_block_idx = bytes / BLOCK_SIZE;
+			int free_fd_offset = bytes % BLOCK_SIZE;
+			disk_utils::RawDiskWriter fout(&ios, free_fd_block_idx, free_fd_offset);
+			return EXIT_SUCCESS;
+		}
+		else {
+			return EXIT_FAILURE;
+		}
 	}
 
 	int FileSystem::destroyFile(char filename[MAX_FILENAME_LENGTH])
@@ -292,7 +300,6 @@ namespace filesystem {
 		disk_utils::RawDiskWriter fout(&ios, block_idx, offset);
 		FileDescriptor empty_fd;
 		fout.write(&empty_fd, sizeof(FileDescriptor));
-		fout.flush();
 
 		//remove file entry from directory(swap last dir entry and entry of file which should be destroyed. Then decrease dir length)
 		OFTEntry* dir_oft = oft.findFile(0);

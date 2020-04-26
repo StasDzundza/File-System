@@ -28,12 +28,23 @@ namespace filesystem::components {
 
 	int OFT::addFile(int fd_index)
 	{
-		return 0;
+		//file exists or no space in oft
+		if (oft_size >= FD_OPENED_LIMIT || findFile(fd_index)!= nullptr) {
+			return EXIT_FAILURE;
+		}
+		entries_buf[oft_size++] = OFTEntry();
+		return EXIT_SUCCESS;
 	}
 
 	int OFT::removeFile(int fd_index)
 	{
-		return 0;
+		auto it = std::remove_if(entries_buf.begin(), entries_buf.end(), [fd_index](const OFTEntry& file_entry) {
+			return file_entry.fd_index == fd_index;
+		});
+
+		if (it != entries_buf.end()) {
+			oft_size--;
+		}
 	}
 }
 
