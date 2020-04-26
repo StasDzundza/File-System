@@ -241,7 +241,7 @@ namespace filesystem {
 			fin.read(&free_fd, sizeof(components::FileDescriptor));
 
 			if (free_fd.file_length == -1) {
-				// file descriptor isn't occupie
+				// file descriptor isn't occupied
 				free_fd_index = i + 1;
 				free_fd.file_length = 0;
 				break;
@@ -318,9 +318,9 @@ namespace filesystem {
 			bitset_is_modified = true;
 		}
 
-		disk_utils::RawDiskWriter fout(&ios, 0, 0);
-		fout.write(&free_blocks_set, sizeof(free_blocks_set));
-		fout.write(&dir_fd, sizeof(FileDescriptor));
+		disk_utils::RawDiskWriter f(&ios, 0, 0);
+		f.write(&free_blocks_set, sizeof(free_blocks_set));
+		f.write(&dir_fd, sizeof(FileDescriptor));
 	}
 
 	int FileSystem::read(int fd_index, void* main_mem_ptr, int bytes) {
@@ -343,6 +343,26 @@ namespace filesystem {
 
 	int FileSystem::lseek(int fd_index, int pos)
 	{
-		return 0;
+		OFTEntry* file_entry = oft.findFile(fd_index);
+		if (file_entry != nullptr) {
+			FileDescriptor fd = _getDescriptorByIndex(fd_index);
+			if (pos < 0 || pos > fd.file_length) {
+				return EXIT_FAILURE;
+			}
+			int cur_pos_disk_block = fd.arr_block_num[file_entry->fpos / BLOCK_SIZE];
+			int new_pos_disk_block = fd.arr_block_num[pos / BLOCK_SIZE];
+			if (cur_pos_disk_block != new_pos_disk_block) {
+				if (file_entry->block_modified) {
+					ios.write_block(cur_pos_disk_block, file_entry->read_write_buffer);
+				}
+				ios.read_block(new_pos_disk_block, file_entry->read_write_buffer);
+				file_entry->block_read = true;
+				file_entry->block_modified = false;
+			}
+			file_entry->fpos = pos;
+			return EXIT_SUCCESS;
+		}else {
+			return EXIT_FAILURE;
+		}
 	}
 }
