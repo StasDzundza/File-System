@@ -8,6 +8,7 @@
 #include <bitset>
 #include <vector>
 using std::min;
+using std::max;
 using std::vector;
 
 namespace filesystem {
@@ -52,8 +53,7 @@ namespace filesystem {
 		for(int i = 0; i < FD_CREATED_LIMIT; ++i)
 			fout.write(&f_descriptor, sizeof(f_descriptor));
 
-		// Init directory ??!! TODO: Stas Dzundza
-		// oft->addFile(0);
+		oft.addFile(0);
 	}
 
 	int FileSystem::_readFromFile(OFTEntry* f_entry,  void* write_ptr, int bytes) {
@@ -115,7 +115,8 @@ namespace filesystem {
 		FileDescriptor fd = _getDescriptorByIndex(entry->fd_index);
 		// before reading/writing blocks, we must ensure the file can store requsted bytes
 		// and allocate the necessary bytes
-		if (!_reserveBytesForFile(&fd, bytes)) {
+		int bytes_to_alloc = max(0, bytes - fd.file_length + entry->fpos);
+		if (!_reserveBytesForFile(&fd, bytes_to_alloc)) {
 			return EXIT_FAILURE;
 		}
 		else {
@@ -203,6 +204,25 @@ namespace filesystem {
 		}
 	}
 
+	std::pair<DirectoryEntry, int> FileSystem::_findFileInDirectory(char filename[MAX_FILENAME_LENGTH])
+	{
+		OFTEntry* dir_oft_entry = oft.findFile(0);
+		FileDescriptor dir_fd = _getDescriptorByIndex(0);
+		lseek(0, 0);
+		int num_of_files_in_dir = dir_fd.file_length / sizeof(DirectoryEntry);
+		int dir_entry_idx = 0;
+		for (int i = 0; i < num_of_files_in_dir; i++) {
+			DirectoryEntry cur_dir_entry;
+			_readFromFile(dir_oft_entry, &cur_dir_entry, sizeof(DirectoryEntry));
+			if (std::strcmp(cur_dir_entry.filename, filename) == 0) {
+				return std::make_pair(cur_dir_entry, dir_entry_idx);
+			}else{
+				dir_entry_idx++;
+			}
+		}
+		return std::make_pair(DirectoryEntry(), -1);
+	}
+
 	int FileSystem::read(int fd_index, void* main_mem_ptr, int bytes) {
 		OFTEntry* oft_ptr;
 		if (bytes <= 0 && !(oft_ptr = oft.findFile(fd_index))) {
@@ -219,5 +239,10 @@ namespace filesystem {
 		}
 
 		return _writeToFile(oft_ptr, main_mem_ptr, bytes);
+	}
+
+	int FileSystem::lseek(int fd_index, int pos)
+	{
+		return 0;
 	}
 }

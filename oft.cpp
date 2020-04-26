@@ -25,5 +25,15 @@ namespace filesystem::components {
 	OFTEntry* OFT::getFile(int oft_index) {
 		return &entries_buf[oft_index];
 	}
+
+	int OFT::addFile(int fd_index)
+	{
+		return 0;
+	}
+
+	int OFT::removeFile(int fd_index)
+	{
+		return 0;
+	}
 }
 

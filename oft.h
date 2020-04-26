@@ -16,6 +16,8 @@ namespace filesystem::components {
 	public:
 		OFTEntry* findFile(int fd_index);
 		OFTEntry* getFile(int oft_index);
+		int addFile(int fd_index);
+		int removeFile(int fd_index);
 	private:
 		std::array<OFTEntry, FD_OPENED_LIMIT> entries_buf;
 	};
