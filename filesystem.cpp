@@ -283,4 +283,15 @@ namespace filesystem {
 	{
 		return 0;
 	}
+
+	int FileSystem::open(char filename[MAX_FILENAME_LENGTH])
+	{
+		std::pair<DirectoryEntry, int> file = _findFileInDirectory(filename);
+		if (file.second == -1) return -1;
+		DirectoryEntry dir_entry = file.first;
+		if (oft.addBlock(dir_entry.fd_index) == EXIT_FAILURE) return-1;
+		int curr_pos = oft.addFile(dir_entry.fd_index);
+		ios.read_block(_getDescriptorByIndex(dir_entry.fd_index).arr_block_num[0], oft.getFile(dir_entry.fd_index)->read_write_buffer);
+		return dir_entry.fd_index;
+	}
 }
