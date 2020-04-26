@@ -215,17 +215,55 @@ namespace filesystem {
 			DirectoryEntry cur_dir_entry;
 			_readFromFile(dir_oft_entry, &cur_dir_entry, sizeof(DirectoryEntry));
 			if (std::strcmp(cur_dir_entry.filename, filename) == 0) {
+				dir_entry_idx = i;
 				return std::make_pair(cur_dir_entry, dir_entry_idx);
-			}else{
-				dir_entry_idx++;
 			}
 		}
 		return std::make_pair(DirectoryEntry(), -1);
 	}
 
+	int FileSystem::createFile(char filename[MAX_FILENAME_LENGTH])
+	{
+		FileDescriptor dir_fd = _getDescriptorByIndex(0);
+		int num_files_created = dir_fd.file_length / sizeof(DirectoryEntry);
+
+		if (num_files_created == FD_CREATED_LIMIT || _findFileInDirectory(filename).second != -1)
+			return EXIT_FAILURE;
+
+		// compute the offset before looking for empty descriptor
+		int bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor);
+		int block_idx = bytes / BLOCK_SIZE, offset = bytes % BLOCK_SIZE;
+		disk_utils::RawDiskReader fin(&ios, block_idx, offset);
+
+		FileDescriptor free_fd;
+		int free_fd_index = 0;
+		for (int i = 0; i < FD_CREATED_LIMIT; ++i) {
+			fin.read(&free_fd, sizeof(components::FileDescriptor));
+
+			if (free_fd.file_length == -1) {
+				// file descriptor isn't occupie
+				free_fd_index = i + 1;
+				free_fd.file_length = 0;
+				break;
+			}
+		}
+		if (!free_fd_index) {
+			// 0 free file descriptors found
+			return EXIT_FAILURE;
+		}
+
+		DirectoryEntry new_entry(free_fd_index, filename);
+
+		OFTEntry* dir = oft.findFile(0);
+		lseek(0, num_files_created * sizeof(DirectoryEntry));
+
+		_writeToFile(dir, &new_entry, sizeof(DirectoryEntry));
+		return EXIT_SUCCESS;
+	}
+
 	int FileSystem::read(int fd_index, void* main_mem_ptr, int bytes) {
 		OFTEntry* oft_ptr;
-		if (bytes <= 0 && !(oft_ptr = oft.findFile(fd_index))) {
+		if (bytes <= 0 || !(oft_ptr = oft.findFile(fd_index))) {
 			return EXIT_FAILURE;
 		}
 
@@ -234,7 +272,7 @@ namespace filesystem {
 
 	int FileSystem::write(int fd_index, void* main_mem_ptr, int bytes) {
 		OFTEntry* oft_ptr;
-		if (bytes <= 0 && !(oft_ptr = oft.findFile(fd_index))) {
+		if (bytes <= 0 || !(oft_ptr = oft.findFile(fd_index))) {
 			return EXIT_FAILURE;
 		}
 
