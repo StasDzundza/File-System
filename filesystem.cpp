@@ -400,4 +400,19 @@ namespace filesystem {
 		oft.removeFile(fd_index);
 		return EXIT_SUCCESS;
 	}
+
+	vector<char[MAX_FILENAME_LENGTH]> FileSystem::getFiles()
+	{
+		vector<char[MAX_FILENAME_LENGTH]> filenames;
+		OFTEntry* dir_oft_entry = oft.findFile(0);
+		FileDescriptor dir_fd = _getDescriptorByIndex(0);
+		lseek(0, 0);
+		int num_of_files_in_dir = dir_fd.file_length / sizeof(DirectoryEntry);
+		for (int i = 0; i < num_of_files_in_dir; i++) {
+			DirectoryEntry cur_dir_entry;
+			_readFromFile(dir_oft_entry, &cur_dir_entry, sizeof(DirectoryEntry));
+			filenames.push_back(cur_dir_entry.filename);
+		}
+		return filenames;
+	}
 }
