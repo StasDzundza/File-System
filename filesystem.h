@@ -3,6 +3,7 @@
 #include <memory>
 #include <utility>
 #include <optional>
+#include <vector>
 
 #include "oft.h"
 #include "IOSystem/IOSystem.h"
@@ -32,6 +33,7 @@ namespace filesystem {
 		int open(char filename[MAX_FILENAME_LENGTH]);
 		int close(int fd_index);
 		std::vector<char[MAX_FILENAME_LENGTH]> getFiles();
+		int save();
 	private:
 		io::IOSystem ios;
 		OFT oft;

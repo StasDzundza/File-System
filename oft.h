@@ -18,6 +18,7 @@ namespace filesystem::components {
 		OFTEntry* getFile(int oft_index);
 		int addFile(int fd_index);
 		int removeFile(int fd_index);
+		int getSize();
 	private:
 		int oft_size = 0;
 		std::array<OFTEntry, FD_OPENED_LIMIT> entries_buf;

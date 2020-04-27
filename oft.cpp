@@ -46,5 +46,9 @@ namespace filesystem::components {
 			oft_size--;
 		}
 	}
+	int OFT::getSize()
+	{
+		return oft_size;
+	}
 }
 

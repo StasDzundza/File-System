@@ -415,4 +415,18 @@ namespace filesystem {
 		}
 		return filenames;
 	}
+
+	int FileSystem::save()
+	{
+		int oft_size = oft.getSize();
+		for (int i = oft_size - 1; i != 0; i--) {
+			OFTEntry* file_entry = oft.getFile(i);
+			FileDescriptor fd = _getDescriptorByIndex(file_entry->fd_index);
+			if (file_entry->block_modified) {
+				ios.write_block(fd.arr_block_num[file_entry->fpos / BLOCK_SIZE], file_entry->read_write_buffer);
+			}
+			oft.removeFile(file_entry->fd_index);
+		}
+		return EXIT_SUCCESS;
+	}
 }
