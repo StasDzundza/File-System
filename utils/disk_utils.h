@@ -2,23 +2,23 @@
 
 #include "../fs_config.h"
 namespace filesystem::io {
-    class IOSystem;
+    class IOSystemInterface;
 }
 namespace filesystem::disk_utils {
-	using namespace config;
+	using namespace filesystem::config;
     class RawDiskStream {
     public:
-        RawDiskStream(io::IOSystem* ios, int block_idx, int shift);
+        RawDiskStream(io::IOSystemInterface* ios, int block_idx, int shift);
     protected:
         char block_buf[BLOCK_SIZE];
-        io::IOSystem* ios;
+        io::IOSystemInterface* ios;
         int block_idx, shift;
         bool block_read;
     };
 
     class RawDiskWriter : public RawDiskStream {
     public:
-        RawDiskWriter(io::IOSystem* ios, int block_idx, int shift);
+        RawDiskWriter(io::IOSystemInterface* ios, int block_idx, int shift);
         ~RawDiskWriter();
 
         void flush();
@@ -27,7 +27,7 @@ namespace filesystem::disk_utils {
 
     class RawDiskReader : public RawDiskStream {
     public:
-        RawDiskReader(io::IOSystem* ios, int block_idx, int shift);
+        RawDiskReader(io::IOSystemInterface* ios, int block_idx, int shift);
 
         void read(void* write_ptr, int bytes);
         void clear();

@@ -1,5 +1,5 @@
-
-#include "../IOSystem/IOSystem.h"
+#include "../IOSystem/LBASystem.h"
+#include "../IOSystem/io_config.h"
 
 #include <cassert>
 #include <cstring>
@@ -7,19 +7,30 @@
 #include <iostream>
 using namespace filesystem;
 using namespace std;
+using namespace io::config;
 
 void test1() {
     // filesystem not initialized
-    io::IOSystem ios;
+    io::LBASystem ios_lba;
 }
 
 void test2() {
+    io::LBASystem ios_lba;
     // path to file don't exist
-    io::IOSystem ios;
-    ios.init("dummy_path/");
+    // ios_lba.init(1, 1, "dummy_path/");
+    // file don't exist, new one is created
+    ios_lba.init(1, 1, "dummy.txt");
 }
 
-class TestIOSystem : public io::IOSystem {
+void test3() {
+    io::LBASystem ios_lba;
+    // ios_lba.init(MAX_BLOCKS_NUM+1, MAX_BLOCK_SIZE + 1, "state.txt");
+    // ios_lba.init(-1, -1, "dummy.txt"); // file exists
+    // ios_lba.init(-1, -1, "dummy2.txt"); // file not exists
+}
+
+
+class TestIOSystem : public io::LBASystem {
 public:
     int getBlocksNum() {
         return _blocks_num;
@@ -36,9 +47,9 @@ public:
     }
 };
 
-void test3() {
-    char write_buf[config::BLOCK_SIZE] = {0};
-    char read_buf[config::BLOCK_SIZE] = {0};
+void test4() {
+    char write_buf[MAX_BLOCK_SIZE] = {0};
+    char read_buf[MAX_BLOCK_SIZE] = {0};
 
     char msg[] = "THis is a simple message";
     memcpy(write_buf, msg, sizeof(msg));
@@ -50,10 +61,10 @@ void test3() {
     // empty fs after writing/reading state
     {
         TestIOSystem ios;
-        ios.init("data2.txt");
-        int block_num = 5 + rand() % (config::DISC_BLOCKS_NUM-10)/2;
+        ios.init(MAX_BLOCKS_NUM, MAX_BLOCK_SIZE, "data2.txt");
+        int block_num = 5 + rand() % (MAX_BLOCKS_NUM-10)/2;
         for(int i = 0; i < block_num; ++i) {
-            int block_idx = rand() % config::DISC_BLOCKS_NUM;
+            int block_idx = rand() % MAX_BLOCKS_NUM;
             ios.write_block(block_idx, write_buf);
             write_to_idx.insert(block_idx);
 
@@ -62,7 +73,7 @@ void test3() {
         }
     }
     TestIOSystem new_ios;
-    new_ios.init("data2.txt");
+    new_ios.init(MAX_BLOCKS_NUM, MAX_BLOCK_SIZE, "data2.txt");
 
     for (int index : write_to_idx) {
         new_ios.read_block(index, read_buf);
@@ -71,6 +82,6 @@ void test3() {
 }
 
 int main() {
-    test3();
+    test4();
     return 0;
 }

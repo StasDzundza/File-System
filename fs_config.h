@@ -1,8 +1,8 @@
 #pragma once
 
 namespace filesystem::config {
-	const int BLOCK_SIZE = 64;          // 64 bytes size of physical memory block 
-	const int DISC_BLOCKS_NUM = 32;     // size of physical disk
+	const int BLOCK_SIZE = 64;          // 64 bytes size of logical disk block
+	const int DISC_BLOCKS_NUM = 32;     // amount of logical disk blocks
 	const int SYSTEM_BLOCKS_NUM = 8;    // blocks occupied by the fs
 
 	// (FD_CREATED_LIMIT+1)*(sizeof(int)+MAX_FILENAME_LENGTH)+DISC_BLOCKS_NUM/8 < SYSTEM_BLOCKS_NUM*BLOCK_SIZE

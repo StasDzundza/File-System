@@ -1,19 +1,19 @@
-
 #include "filesystem.h"
-#include "components/file_descriptor.h"
-#include "utils/disk_utils.h"
-#include "fs_config.h"
 
 #include <cmath>
 #include <bitset>
 #include <vector>
-using std::min;
-using std::max;
-using std::vector;
+
+#include "components/file_descriptor.h"
+#include "utils/disk_utils.h"
+#include "fs_config.h"
+
 
 namespace filesystem {
+	using namespace filesystem::config;
+	using namespace std;
 	FileSystem::FileSystem() {
-		ios.init(SYSTEM_PATH);
+		ios.init(DISC_BLOCKS_NUM, BLOCK_SIZE, SYSTEM_PATH);
 		_initFileSystem();
 	}
 
@@ -116,7 +116,7 @@ namespace filesystem {
 		// before reading/writing blocks, we must ensure the file can store requsted bytes
 		// and allocate the necessary bytes
 		int bytes_to_alloc = max(0, bytes - fd.file_length + entry->fpos);
-		if (!_reserveBytesForFile(&fd, bytes_to_alloc)) {
+		if (_reserveBytesForFile(&fd, bytes_to_alloc) == EXIT_FAILURE) {
 			return EXIT_FAILURE;
 		}
 		else {
@@ -163,9 +163,9 @@ namespace filesystem {
 		if (fd->file_length + bytes <= BLOCK_SIZE * MAX_FILE_BLOCKS) {
 			int offset_in_last_block = fd->file_length % BLOCK_SIZE;
 			bytes -= (BLOCK_SIZE - offset_in_last_block);
-			int num_of_occupied_blocks = ceil((double)fd->file_length / BLOCK_SIZE);
+			int num_of_occupied_blocks = (fd->file_length + BLOCK_SIZE + 1) / BLOCK_SIZE;
 			//calculate num of new blocks that we need
-			int num_of_new_blocks = ceil((double)bytes / BLOCK_SIZE);
+			int num_of_new_blocks = (bytes + BLOCK_SIZE + 1) / BLOCK_SIZE;
 
 			if (num_of_new_blocks == 0) {
 				// No need to read the bitset, add any blocks
@@ -204,45 +204,20 @@ namespace filesystem {
 		}
 	}
 
-	std::pair<DirectoryEntry, int> FileSystem::_findFileInDirectory(char filename[MAX_FILENAME_LENGTH])
-	{
-		OFTEntry* dir_oft_entry = oft.findFile(0);
-		FileDescriptor dir_fd = _getDescriptorByIndex(0);
-		lseek(0, 0);
-		int num_of_files_in_dir = dir_fd.file_length / sizeof(DirectoryEntry);
-		int dir_entry_idx = 0;
-		for (int i = 0; i < num_of_files_in_dir; i++) {
-			DirectoryEntry cur_dir_entry;
-			_readFromFile(dir_oft_entry, &cur_dir_entry, sizeof(DirectoryEntry));
-			if (std::strcmp(cur_dir_entry.filename, filename) == 0) {
-				return std::make_pair(cur_dir_entry, dir_entry_idx);
-			}else{
-				dir_entry_idx++;
-			}
-		}
-		return std::make_pair(DirectoryEntry(), -1);
-	}
-
 	int FileSystem::read(int fd_index, void* main_mem_ptr, int bytes) {
-		OFTEntry* oft_ptr;
-		if (bytes <= 0 && !(oft_ptr = oft.findFile(fd_index))) {
-			return EXIT_FAILURE;
-		}
-
-		return _readFromFile(oft_ptr, main_mem_ptr, bytes);
+		bool read_ok = bytes <= 0;
+		if (!read_ok)
+			return 0;
+		OFTEntry* oft_ptr = oft.findFile(fd_index);
+		return oft_ptr && _readFromFile(oft_ptr, main_mem_ptr, bytes);
 	}
 
 	int FileSystem::write(int fd_index, void* main_mem_ptr, int bytes) {
-		OFTEntry* oft_ptr;
-		if (bytes <= 0 && !(oft_ptr = oft.findFile(fd_index))) {
-			return EXIT_FAILURE;
-		}
-
-		return _writeToFile(oft_ptr, main_mem_ptr, bytes);
+		bool read_ok = bytes <= 0;
+		if (!read_ok)
+			return 0;
+		OFTEntry* oft_ptr = oft.findFile(fd_index);
+		return oft_ptr && _writeToFile(oft_ptr, main_mem_ptr, bytes);
 	}
 
-	int FileSystem::lseek(int fd_index, int pos)
-	{
-		return 0;
-	}
 }

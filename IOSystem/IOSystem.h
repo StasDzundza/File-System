@@ -1,44 +1,25 @@
-#ifndef INPUT_OUTPUT_SYSTEM_H
-#define INPUT_OUTPUT_SYSTEM_H
+#pragma once
 
-#include "../fs_config.h"
 namespace filesystem::io {
-	using namespace config;
-	class IOSystem {
-	private:
-		bool file_exists(const char *path) const;
-
-	public:
-		IOSystem();
-		void init(const char *system_state_path);
-		~IOSystem();
-
-		// This copies the logical block ldisk[i] into main memory starting at the
-		// location specified by the pointer p. The number of characters copied
-		// corresponds to the block length, B.
-		void read_block(int block_idx, char *copy_to_ptr);
-
-		// This copies the number of characters corresponding to the block length, B,
-		// from main memory starting at the location specified by the pointer p, into
-		// the logical block ldisk[i].
-		void write_block(int block_idx, char *copy_from_ptr);
-
-		// saves current disk state to the file with path specified in the
-		// storage_path
-		void save_system_state();
-
-		// restores current disk state from the file with path specified in the
-		// storage_path
-		void restore_system_state();
-
+	class IOSystemInterface {
 	protected:
-		int _blocks_num;
-		int _block_len;
-		char _ldisk[DISC_BLOCKS_NUM][BLOCK_SIZE];
+		void _close_fs();
+		bool _file_exists(const char *path) const;
+		void _init(const char* _system_state_path);
+	public:
+		/* Copies the logical disk block i into memory starting from the
+		 * address specified by the pointer p. The number of characters copied
+		 * equals to the logical block length. */
+		virtual void read_block(int i, char *p) = 0;
 
-		const char *_system_state_path;
+		/* Copies the number of characters corresponding to the logical block length,
+		 * starting from the memory address specified by the pointer p, into
+		 * the logical disk block i. */
+		virtual void write_block(int i, char *p) = 0;
+
+		virtual void save_system_state() = 0;
+		virtual void restore_system_state() = 0;
+	protected:
+		const char* _system_state_path = nullptr;
 	};
-
 } // namespace filesystem::io
-
-#endif

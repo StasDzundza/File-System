@@ -1,4 +1,3 @@
-
 #include "disk_utils.h"
 
 #include <algorithm>
@@ -8,11 +7,11 @@ using std::min;
 #include "../IOSystem/IOSystem.h"
 
 namespace filesystem::disk_utils {
-    RawDiskStream::RawDiskStream(io::IOSystem* ios, int block_idx, int shift) :
+    RawDiskStream::RawDiskStream(io::IOSystemInterface* ios, int block_idx, int shift) :
         ios(ios), block_idx(block_idx), shift(shift), block_read(false) {
     }
 
-    RawDiskWriter::RawDiskWriter(io::IOSystem* ios, int block_idx, int shift) :
+    RawDiskWriter::RawDiskWriter(io::IOSystemInterface* ios, int block_idx, int shift) :
         RawDiskStream(ios, block_idx, shift) {
     }
 
@@ -62,7 +61,7 @@ namespace filesystem::disk_utils {
         }
     }
 
-    RawDiskReader::RawDiskReader(io::IOSystem* ios, int block_idx, int shift) :
+    RawDiskReader::RawDiskReader(io::IOSystemInterface* ios, int block_idx, int shift) :
         RawDiskStream(ios, block_idx, shift) {
     }
 
