@@ -1,8 +1,8 @@
 #include "filesystem.h"
 
+#include <fstream>
 #include <cmath>
 #include <bitset>
-
 #include "components/file_descriptor.h"
 #include "utils/disk_utils.h"
 #include "fs_config.h"
@@ -11,9 +11,9 @@
 namespace filesystem {
 	using namespace filesystem::config;
 	using namespace std;
+
 	FileSystem::FileSystem() {
-		ios.init(DISC_BLOCKS_NUM, BLOCK_SIZE, SYSTEM_PATH);
-		_initFileSystem();
+		loadDisk(SYSTEM_PATH);
 	}
 
 	FileDescriptor FileSystem::_getDescriptorByIndex(int fd_index) {
@@ -31,10 +31,7 @@ namespace filesystem {
 		Save filesystem data to disk: write bitmap, 
 		directory descriptor,empty file descriptors.
 	*/
-	void FileSystem::_initFileSystem() {
-		// TODO: Stas Dzundza
-		// Add restoring fileSystem options from IOSystem
-	
+	void FileSystem::_initFileSystem() {	
 		disk_utils::RawDiskWriter fout(&ios, 0, 0);
 
 		// mark first k first bits as occupied
@@ -53,6 +50,17 @@ namespace filesystem {
 			fout.write(&f_descriptor, sizeof(f_descriptor));
 
 		oft.addFile(0);
+	}
+
+	void FileSystem::_restoreFileSystem()
+	{
+		FileDescriptor dir_fd = _getDescriptorByIndex(0);
+		oft.addFile(0);
+		if (dir_fd.file_length > 0) {
+			OFTEntry *directory_oft = oft.getFile(0);
+			_readFromFile(directory_oft, directory_oft->read_write_buffer, BLOCK_SIZE);
+			directory_oft->block_read = true;
+		}
 	}
 
 	int FileSystem::_readFromFile(OFTEntry* f_entry,  void* write_ptr, int bytes) {
@@ -242,6 +250,16 @@ namespace filesystem {
 		return std::make_pair(DirectoryEntry(), -1);
 	}
 
+	bool FileSystem::_fileExists(const char* filename)
+	{
+		ifstream fin(filename);
+		if (fin.is_open()) {
+			fin.close();
+			return true;
+		}
+		return false;
+	}
+
 	int FileSystem::createFile(char filename[MAX_FILENAME_LENGTH])
 	{
 		FileDescriptor dir_fd = _getDescriptorByIndex(0);
@@ -349,6 +367,7 @@ namespace filesystem {
 		disk_utils::RawDiskWriter f(&ios, 0, 0);
 		f.write(&free_blocks_set, sizeof(free_blocks_set));
 		f.write(&dir_fd, sizeof(FileDescriptor));
+		return EXIT_SUCCESS;
 	}
 
 
@@ -380,9 +399,9 @@ namespace filesystem {
 	int FileSystem::open(char filename[MAX_FILENAME_LENGTH])
 	{
 		std::pair<DirectoryEntry, int> file = _findFileInDirectory(filename);
-		if (file.second == -1) return -1;
+		if (file.second == -1) return EXIT_FAILURE;
 		int fd_index = file.first.fd_index;
-		if (oft.addFile(fd_index) == EXIT_FAILURE) return-1;
+		if (oft.addFile(fd_index) == EXIT_FAILURE) return EXIT_FAILURE;
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
 		if (fd.file_length != 0) {
 			ios.read_block(fd.arr_block_num[0], oft.getFile(fd_index)->read_write_buffer);
@@ -431,6 +450,22 @@ namespace filesystem {
 			}
 			oft.removeFile(file_entry->fd_index);
 		}
+		ios.save_system_state();
 		return EXIT_SUCCESS;
+	}
+
+	int FileSystem::loadDisk(const char* filename)
+	{
+		//save current disk state
+		save();
+		//init new disk state
+		ios.init(DISC_BLOCKS_NUM, BLOCK_SIZE, filename);
+		if (_fileExists(filename)) {
+			_restoreFileSystem();
+			return 1;
+		}else {
+			_initFileSystem();
+			return 2;
+		}
 	}
 }
