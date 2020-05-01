@@ -152,6 +152,11 @@ namespace filesystem {
 			entry->fpos += bytes;
 			if (entry->fpos > fd.file_length) {
 				fd.file_length = entry->fpos;
+				int fd_shift = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor) * entry->fd_index;
+				int fd_block_idx = bytes / BLOCK_SIZE;
+				int fd_offset = bytes % BLOCK_SIZE;
+				disk_utils::RawDiskWriter fout(&ios, fd_block_idx, fd_offset);
+				fout.write(&fd, sizeof(FileDescriptor));
 			}
 			return EXIT_SUCCESS;
 		}
@@ -163,9 +168,9 @@ namespace filesystem {
 		if (fd->file_length + bytes <= BLOCK_SIZE * MAX_FILE_BLOCKS) {
 			int offset_in_last_block = fd->file_length % BLOCK_SIZE;
 			bytes -= (BLOCK_SIZE - offset_in_last_block);
-			int num_of_occupied_blocks = (fd->file_length + BLOCK_SIZE + 1) / BLOCK_SIZE;
+			int num_of_occupied_blocks = (fd->file_length + BLOCK_SIZE - 1) / BLOCK_SIZE;
 			//calculate num of new blocks that we need
-			int num_of_new_blocks = (bytes + BLOCK_SIZE + 1) / BLOCK_SIZE;
+			int num_of_new_blocks = (bytes + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
 			if (num_of_new_blocks == 0) {
 				// No need to read the bitset, add any blocks
@@ -278,6 +283,7 @@ namespace filesystem {
 			int free_fd_block_idx = bytes / BLOCK_SIZE;
 			int free_fd_offset = bytes % BLOCK_SIZE;
 			disk_utils::RawDiskWriter fout(&ios, free_fd_block_idx, free_fd_offset);
+			fout.write(&free_fd, sizeof(FileDescriptor));
 			return EXIT_SUCCESS;
 		}
 		else {
@@ -302,7 +308,7 @@ namespace filesystem {
 		bool bitset_is_modified = false;
 
 		FileDescriptor fd = _getDescriptorByIndex(file_dir_entry.fd_index);
-		int num_of_occupied_blocks = ceil((double)fd.file_length / BLOCK_SIZE);
+		int num_of_occupied_blocks = ceil((fd.file_length + BLOCK_SIZE - 1) / BLOCK_SIZE);
 		if (num_of_occupied_blocks) {
 			for (int i = 0; i < num_of_occupied_blocks; i++) {
 				free_blocks_set[fd.arr_block_num[i]] = 0;
@@ -331,7 +337,7 @@ namespace filesystem {
 
 		//update directory descriptor
 		int dir_length_before_destr = dir_fd.file_length + sizeof(DirectoryEntry);
-		int num_of_dir_disk_blocks = ceil((double)dir_length_before_destr / BLOCK_SIZE);
+		int num_of_dir_disk_blocks = ceil((dir_length_before_destr + BLOCK_SIZE - 1) / BLOCK_SIZE);
 		int free_space_in_dir = (num_of_dir_disk_blocks * BLOCK_SIZE) - dir_fd.file_length;
 		//free disk dir blocks if we have empty
 		while (free_space_in_dir >= BLOCK_SIZE) {
