@@ -44,7 +44,16 @@ namespace filesystem::components {
 
 		if (it != entries_buf.end()) {
 			oft_size--;
+			return EXIT_SUCCESS;
 		}
+		else {
+			return EXIT_FAILURE;
+		}
+	}
+
+	int OFT::getNumOFOpenFiles()
+	{
+		return oft_size;
 	}
 }
 

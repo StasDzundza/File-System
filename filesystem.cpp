@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <bitset>
-#include <vector>
 
 #include "components/file_descriptor.h"
 #include "utils/disk_utils.h"
@@ -308,7 +307,7 @@ namespace filesystem {
 		bool bitset_is_modified = false;
 
 		FileDescriptor fd = _getDescriptorByIndex(file_dir_entry.fd_index);
-		int num_of_occupied_blocks = ceil((fd.file_length + BLOCK_SIZE - 1) / BLOCK_SIZE);
+		int num_of_occupied_blocks = (fd.file_length + BLOCK_SIZE - 1) / BLOCK_SIZE;
 		if (num_of_occupied_blocks) {
 			for (int i = 0; i < num_of_occupied_blocks; i++) {
 				free_blocks_set[fd.arr_block_num[i]] = 0;
@@ -337,7 +336,7 @@ namespace filesystem {
 
 		//update directory descriptor
 		int dir_length_before_destr = dir_fd.file_length + sizeof(DirectoryEntry);
-		int num_of_dir_disk_blocks = ceil((dir_length_before_destr + BLOCK_SIZE - 1) / BLOCK_SIZE);
+		int num_of_dir_disk_blocks = (dir_length_before_destr + BLOCK_SIZE - 1) / BLOCK_SIZE;
 		int free_space_in_dir = (num_of_dir_disk_blocks * BLOCK_SIZE) - dir_fd.file_length;
 		//free disk dir blocks if we have empty
 		while (free_space_in_dir >= BLOCK_SIZE) {
@@ -376,5 +375,62 @@ namespace filesystem {
 		}else {
 			return EXIT_FAILURE;
 		}
+	}
+
+	int FileSystem::open(char filename[MAX_FILENAME_LENGTH])
+	{
+		std::pair<DirectoryEntry, int> file = _findFileInDirectory(filename);
+		if (file.second == -1) return -1;
+		int fd_index = file.first.fd_index;
+		if (oft.addFile(fd_index) == EXIT_FAILURE) return-1;
+		FileDescriptor fd = _getDescriptorByIndex(fd_index);
+		if (fd.file_length != 0) {
+			ios.read_block(fd.arr_block_num[0], oft.getFile(fd_index)->read_write_buffer);
+			oft.findFile(fd_index)->block_read = true;
+		}
+		return fd_index;
+	}
+
+	int FileSystem::close(int fd_index)
+	{
+		OFTEntry* file_entry = oft.findFile(fd_index);
+		if (!file_entry) {
+			return EXIT_FAILURE;
+		}
+		FileDescriptor fd = _getDescriptorByIndex(fd_index);
+		if (file_entry->block_modified) {
+			ios.write_block(fd.arr_block_num[file_entry->fpos/BLOCK_SIZE], file_entry->read_write_buffer);
+		}
+		oft.removeFile(fd_index);
+		return EXIT_SUCCESS;
+	}
+
+	/*vector<char[MAX_FILENAME_LENGTH]> FileSystem::getAllDirectoryFiles()
+	{
+		vector<char[MAX_FILENAME_LENGTH]> filenames;
+		OFTEntry* dir_oft_entry = oft.findFile(0);
+		FileDescriptor dir_fd = _getDescriptorByIndex(0);
+		lseek(0, 0);
+		int num_of_files_in_dir = dir_fd.file_length / sizeof(DirectoryEntry);
+		for (int i = 0; i < num_of_files_in_dir; i++) {
+			DirectoryEntry cur_dir_entry;
+			_readFromFile(dir_oft_entry, &cur_dir_entry, sizeof(DirectoryEntry));
+			filenames.emplace_back(cur_dir_entry.filename);
+		}
+		return filenames;
+	}*/
+
+	int FileSystem::save()
+	{
+		int oft_size = oft.getNumOFOpenFiles();
+		for (int i = oft_size - 1; i != 0; i--) {
+			OFTEntry* file_entry = oft.getFile(i);
+			FileDescriptor fd = _getDescriptorByIndex(file_entry->fd_index);
+			if (file_entry->block_modified) {
+				ios.write_block(fd.arr_block_num[file_entry->fpos / BLOCK_SIZE], file_entry->read_write_buffer);
+			}
+			oft.removeFile(file_entry->fd_index);
+		}
+		return EXIT_SUCCESS;
 	}
 }

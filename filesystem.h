@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "oft.h"
 #include "IOSystem/LBASystem.h"
 #include "components/file_descriptor.h"
@@ -24,6 +28,10 @@ namespace filesystem {
 		int read(int fd_index, void* main_mem_ptr, int bytes);
 		int write(int fd_index, void* main_mem_ptr, int bytes);
 		int lseek(int fd_index, int pos);
+		int open(char filename[MAX_FILENAME_LENGTH]);
+		int close(int fd_index);
+		std::vector<char[MAX_FILENAME_LENGTH]> getAllDirectoryFiles();
+		int save();
 	private:
 		io::LBASystem ios;
 		OFT oft;
