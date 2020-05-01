@@ -17,7 +17,8 @@ namespace filesystem {
 		int _reserveBytesForFile(FileDescriptor* fd, int bytes);
 	public:
 		FileSystem();
-
+		int createFile(char filename[MAX_FILENAME_LENGTH]);
+		int destroyFile(char filename[MAX_FILENAME_LENGTH]);
 		int read(int fd_index, void* main_mem_ptr, int bytes);
 		int write(int fd_index, void* main_mem_ptr, int bytes);
 	private:

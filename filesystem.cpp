@@ -220,4 +220,155 @@ namespace filesystem {
 		return oft_ptr && _writeToFile(oft_ptr, main_mem_ptr, bytes);
 	}
 
+	std::pair<DirectoryEntry, int> FileSystem::_findFileInDirectory(char filename[MAX_FILENAME_LENGTH])
+	{
+		OFTEntry* dir_oft_entry = oft.findFile(0);
+		FileDescriptor dir_fd = _getDescriptorByIndex(0);
+		lseek(0, 0);
+		int num_of_files_in_dir = dir_fd.file_length / sizeof(DirectoryEntry);
+		int dir_entry_idx = 0;
+		for (int i = 0; i < num_of_files_in_dir; i++) {
+			DirectoryEntry cur_dir_entry;
+			_readFromFile(dir_oft_entry, &cur_dir_entry, sizeof(DirectoryEntry));
+			if (std::strcmp(cur_dir_entry.filename, filename) == 0) {
+				dir_entry_idx = i;
+				return std::make_pair(cur_dir_entry, dir_entry_idx);
+			}
+		}
+		return std::make_pair(DirectoryEntry(), -1);
+	}
+
+	int FileSystem::createFile(char filename[MAX_FILENAME_LENGTH])
+	{
+		FileDescriptor dir_fd = _getDescriptorByIndex(0);
+		int num_files_created = dir_fd.file_length / sizeof(DirectoryEntry);
+
+		if (num_files_created == FD_CREATED_LIMIT || _findFileInDirectory(filename).second != -1)
+			return EXIT_FAILURE;
+
+		// compute the offset before looking for empty descriptor
+		int bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor);
+		int block_idx = bytes / BLOCK_SIZE, offset = bytes % BLOCK_SIZE;
+		disk_utils::RawDiskReader fin(&ios, block_idx, offset);
+
+		FileDescriptor free_fd;
+		int free_fd_index = 0;
+		for (int i = 0; i < FD_CREATED_LIMIT; ++i) {
+			fin.read(&free_fd, sizeof(components::FileDescriptor));
+
+			if (free_fd.file_length == -1) {
+				// file descriptor isn't occupied
+				free_fd_index = i + 1;
+				free_fd.file_length = 0;
+				break;
+			}
+		}
+		if (!free_fd_index) {
+			// zero free file descriptors found
+			return EXIT_FAILURE;
+		}
+
+		DirectoryEntry new_entry(free_fd_index, filename);
+
+		OFTEntry* dir = oft.findFile(0);
+		lseek(0, num_files_created * sizeof(DirectoryEntry));
+
+		if (_writeToFile(dir, &new_entry, sizeof(DirectoryEntry)) == EXIT_SUCCESS) {
+			bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor)*free_fd_index;
+			int free_fd_block_idx = bytes / BLOCK_SIZE;
+			int free_fd_offset = bytes % BLOCK_SIZE;
+			disk_utils::RawDiskWriter fout(&ios, free_fd_block_idx, free_fd_offset);
+			return EXIT_SUCCESS;
+		}
+		else {
+			return EXIT_FAILURE;
+		}
+	}
+
+	int FileSystem::destroyFile(char filename[MAX_FILENAME_LENGTH])
+	{
+		std::pair<DirectoryEntry, int> dir_entry_info = _findFileInDirectory(filename);
+		DirectoryEntry file_dir_entry = dir_entry_info.first;
+		OFTEntry* file_oft_entry;
+		//if not found with such filename in directory or file is open
+		if (dir_entry_info.second == -1 || ((file_oft_entry = oft.findFile(file_dir_entry.fd_index)))) {
+			return EXIT_FAILURE;
+		}
+
+		//free occupied disk blocks in bitmap
+		std::bitset<DISC_BLOCKS_NUM> free_blocks_set;
+		disk_utils::RawDiskReader fin(&ios, 0, 0);
+		fin.read(&free_blocks_set, sizeof(free_blocks_set));
+		bool bitset_is_modified = false;
+
+		FileDescriptor fd = _getDescriptorByIndex(file_dir_entry.fd_index);
+		int num_of_occupied_blocks = ceil((double)fd.file_length / BLOCK_SIZE);
+		if (num_of_occupied_blocks) {
+			for (int i = 0; i < num_of_occupied_blocks; i++) {
+				free_blocks_set[fd.arr_block_num[i]] = 0;
+			}
+			bitset_is_modified = true;
+		}		
+
+		//free occupied file descriptor
+		int bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor)*file_dir_entry.fd_index;
+		int block_idx = bytes / BLOCK_SIZE, offset = bytes % BLOCK_SIZE;
+		disk_utils::RawDiskWriter fout(&ios, block_idx, offset);
+		FileDescriptor empty_fd;
+		fout.write(&empty_fd, sizeof(FileDescriptor));
+
+		//remove file entry from directory(swap last dir entry and entry of file which should be destroyed. Then decrease dir length)
+		OFTEntry* dir_oft = oft.findFile(0);
+		FileDescriptor dir_fd = _getDescriptorByIndex(0);
+		int last_dir_entry_offset = dir_fd.file_length - sizeof(DirectoryEntry);
+		lseek(0, last_dir_entry_offset);
+		DirectoryEntry last_dir_entry;
+		_readFromFile(dir_oft, &last_dir_entry, sizeof(DirectoryEntry));
+		int remove_file_offset = sizeof(DirectoryEntry) * dir_entry_info.second;
+		lseek(0, remove_file_offset);
+		_writeToFile(dir_oft, &last_dir_entry, sizeof(DirectoryEntry));
+		dir_fd.file_length -= sizeof(DirectoryEntry);
+
+		//update directory descriptor
+		int dir_length_before_destr = dir_fd.file_length + sizeof(DirectoryEntry);
+		int num_of_dir_disk_blocks = ceil((double)dir_length_before_destr / BLOCK_SIZE);
+		int free_space_in_dir = (num_of_dir_disk_blocks * BLOCK_SIZE) - dir_fd.file_length;
+		//free disk dir blocks if we have empty
+		while (free_space_in_dir >= BLOCK_SIZE) {
+			free_space_in_dir -= BLOCK_SIZE;
+			free_blocks_set[dir_fd.arr_block_num[num_of_dir_disk_blocks - 1]] = 0;
+			num_of_dir_disk_blocks--;
+			bitset_is_modified = true;
+		}
+
+		disk_utils::RawDiskWriter f(&ios, 0, 0);
+		f.write(&free_blocks_set, sizeof(free_blocks_set));
+		f.write(&dir_fd, sizeof(FileDescriptor));
+	}
+
+
+	int FileSystem::lseek(int fd_index, int pos)
+	{
+		OFTEntry* file_entry = oft.findFile(fd_index);
+		if (file_entry != nullptr) {
+			FileDescriptor fd = _getDescriptorByIndex(fd_index);
+			if (pos < 0 || pos > fd.file_length) {
+				return EXIT_FAILURE;
+			}
+			int cur_pos_disk_block = fd.arr_block_num[file_entry->fpos / BLOCK_SIZE];
+			int new_pos_disk_block = fd.arr_block_num[pos / BLOCK_SIZE];
+			if (cur_pos_disk_block != new_pos_disk_block) {
+				if (file_entry->block_modified) {
+					ios.write_block(cur_pos_disk_block, file_entry->read_write_buffer);
+				}
+				ios.read_block(new_pos_disk_block, file_entry->read_write_buffer);
+				file_entry->block_read = true;
+				file_entry->block_modified = false;
+			}
+			file_entry->fpos = pos;
+			return EXIT_SUCCESS;
+		}else {
+			return EXIT_FAILURE;
+		}
+	}
 }
