@@ -32,7 +32,7 @@ namespace filesystem {
 		int lseek(int fd_index, int pos);
 		int open(char filename[MAX_FILENAME_LENGTH]);
 		int close(int fd_index);
-		std::vector<char[MAX_FILENAME_LENGTH]> getAllDirectoryFiles();
+		std::vector<std::string> getAllDirectoryFiles();
 		int save();
 		int loadDisk(const char* filename);
 	private:
