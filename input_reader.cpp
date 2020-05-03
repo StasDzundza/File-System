@@ -20,7 +20,7 @@ namespace filesystem {
 					}
 					else {
 						if (fs.createFile((char*)name.c_str()) == EXIT_SUCCESS) {
-							std::cout << "file" << name << " created" << std::endl;
+							std::cout << "file " << name << " created" << std::endl;
 						}
 						else {
 							_error();
@@ -34,7 +34,7 @@ namespace filesystem {
 					}
 					else {
 						if (fs.destroyFile((char*)name.c_str()) == EXIT_SUCCESS) {
-							std::cout << "file" << name << " destroyed" << std::endl;
+							std::cout << "file " << name << " destroyed" << std::endl;
 						}
 						else {
 							_error();
@@ -49,7 +49,7 @@ namespace filesystem {
 					else {
 						int fd_index = fs.open((char*)name.c_str());
 						if (fd_index != -1) {
-							std::cout << "file" << name << "opened, index = " << fd_index << std::endl;
+							std::cout << "file " << name << " opened, index = " << fd_index << std::endl;
 						}
 						else {
 							_error();
@@ -78,7 +78,11 @@ namespace filesystem {
 					else {
 						char* char_to_read = new char[count];
 						if (fs.read(fd_index, char_to_read, count) == EXIT_SUCCESS) {
-							std::cout << count << " bytes read: " << *char_to_read << std::endl;
+							std::cout << count << " bytes read: ";
+							for (int i = 0; i < count; i++) {
+								std::cout << char_to_read[i];
+							}
+							std::cout << std::endl;
 						}
 						else {
 							_error();
@@ -95,7 +99,7 @@ namespace filesystem {
 					else {
 						char* char_to_write = new char[count];
 						std::fill(char_to_write, char_to_write + count, c);
-						if (fs.read(fd_index, char_to_write, count) == EXIT_SUCCESS) {
+						if (fs.write(fd_index, char_to_write, count) == EXIT_SUCCESS) {
 							std::cout << count << " bytes written" << std::endl;
 						}
 						else {

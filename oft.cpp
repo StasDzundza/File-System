@@ -9,7 +9,7 @@ namespace filesystem::components {
 	}
 
 	OFTEntry* OFT::findFile(int fd_index){
-		if (fd_index <= 0 || fd_index > FD_OPENED_LIMIT)
+		if (fd_index < 0 || fd_index > FD_OPENED_LIMIT)
 			return nullptr;
 
 		auto it = std::find_if(entries_buf.begin(), entries_buf.end(), 
@@ -32,7 +32,9 @@ namespace filesystem::components {
 		if (oft_size >= FD_OPENED_LIMIT || findFile(fd_index)!= nullptr) {
 			return EXIT_FAILURE;
 		}
-		entries_buf[oft_size++] = OFTEntry();
+		OFTEntry new_file_entry;
+		new_file_entry.fd_index = fd_index;
+		entries_buf[oft_size++] = new_file_entry;
 		return EXIT_SUCCESS;
 	}
 

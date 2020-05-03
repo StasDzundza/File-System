@@ -1,7 +1,8 @@
 #include <iostream>
-#include "filesystem.h"
+#include "input_reader.h"
 
 int main() {
-	filesystem::FileSystem fs;
+	filesystem::InputReader inputReader;
+	inputReader.start();
 	return 0;
 }
