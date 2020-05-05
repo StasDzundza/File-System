@@ -7,7 +7,6 @@
 #include "utils/disk_utils.h"
 #include "fs_config.h"
 
-
 namespace filesystem {
 	using namespace config;
 	using namespace std;
@@ -37,17 +36,18 @@ namespace filesystem {
 		// mark first k first bits as occupied
 		int range = (1 << SYSTEM_BLOCKS_NUM) - 1;
 		std::bitset<DISC_BLOCKS_NUM> free_blocks_set(range);
-		fout.write(&free_blocks_set, sizeof(free_blocks_set));
+		fout.write(&free_blocks_set, sizeof(std::bitset<DISC_BLOCKS_NUM>));
 
 		// write directory descriptor to the disk
 		FileDescriptor f_dir;
 		f_dir.file_length = 0;
-		fout.write(&f_dir, sizeof(f_dir));
+		fout.write(&f_dir, sizeof(FileDescriptor));
 
 		//write remaining empty descriptors to the disk
 		FileDescriptor f_descriptor;
-		for(int i = 0; i < FD_CREATED_LIMIT; ++i)
-			fout.write(&f_descriptor, sizeof(f_descriptor));
+		for (int i = 0; i < FD_CREATED_LIMIT; ++i)
+			fout.write(&f_descriptor, sizeof(FileDescriptor));
+		fout.flush();
 
 		oft.addFile(0);
 	}
@@ -188,7 +188,7 @@ namespace filesystem {
 
 			std::bitset<DISC_BLOCKS_NUM> free_blocks_set;
 			disk_utils::RawDiskReader fin(&ios, 0, 0);
-			fin.read(&free_blocks_set, sizeof(free_blocks_set));
+			fin.read(&free_blocks_set, sizeof(std::bitset<DISC_BLOCKS_NUM>));
 
 			vector<int>free_blocks_idx;
 			for (int i = SYSTEM_BLOCKS_NUM; i < DISC_BLOCKS_NUM; i++) {
@@ -206,7 +206,7 @@ namespace filesystem {
 					free_blocks_set[i] = 1;
 				}
 				disk_utils::RawDiskWriter fout(&ios, 0, 0);
-				fout.write(&free_blocks_set, sizeof(free_blocks_set));
+				fout.write(&free_blocks_set, sizeof(std::bitset<DISC_BLOCKS_NUM>));
 				return EXIT_SUCCESS;
 			}
 			else {
@@ -341,6 +341,7 @@ namespace filesystem {
 		disk_utils::RawDiskWriter fout(&ios, block_idx, offset);
 		FileDescriptor empty_fd;
 		fout.write(&empty_fd, sizeof(FileDescriptor));
+		fout.flush();
 
 		//remove file entry from directory(swap last dir entry and entry of file which should be destroyed. Then decrease dir length)
 		OFTEntry* dir_oft = oft.findFile(0);

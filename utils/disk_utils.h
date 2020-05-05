@@ -5,7 +5,7 @@ namespace filesystem::io {
     class IOSystemInterface;
 }
 namespace filesystem::disk_utils {
-	using namespace filesystem::config;
+	using namespace config;
     class RawDiskStream {
     public:
         RawDiskStream(io::IOSystemInterface* ios, int block_idx, int shift);
@@ -19,8 +19,7 @@ namespace filesystem::disk_utils {
     class RawDiskWriter : public RawDiskStream {
     public:
         RawDiskWriter(io::IOSystemInterface* ios, int block_idx, int shift);
-        ~RawDiskWriter();
-
+		~RawDiskWriter();
         void flush();
         void write(void* read_ptr, int bytes);
     };

@@ -4,7 +4,7 @@
 
 namespace filesystem::components {
 	OFTEntry::OFTEntry() :
-		fpos(0), fd_index(0), 
+		fpos(0), fd_index(-1),
 		block_read(false), block_modified(false) {
 	}
 

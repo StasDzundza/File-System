@@ -49,7 +49,7 @@ namespace filesystem {
 					else {
 						int fd_index = fs.open((char*)name.c_str());
 						if (fd_index != -1) {
-							std::cout << "file " << name << " opened, index = " << fd_index << std::endl;
+							std::cout << "file " << name << "opened, index = " << fd_index << std::endl;
 						}
 						else {
 							_error();
@@ -177,7 +177,4 @@ namespace filesystem {
 	{
 		std::cout << "error" << std::endl;
 	}
-
-
-
 }

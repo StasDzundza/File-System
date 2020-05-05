@@ -15,25 +15,26 @@ namespace filesystem::disk_utils {
         RawDiskStream(ios, block_idx, shift) {
     }
 
-    RawDiskWriter::~RawDiskWriter() {
-        if (block_read) {
-            ios->write_block(block_idx, block_buf);
-        }
-    }
+	RawDiskWriter::~RawDiskWriter() {
+		if (block_read) {
+			ios->write_block(block_idx, block_buf);
+		}
+	}
 
     void RawDiskWriter::flush() {
-        ios->write_block(block_idx, block_buf);
-        block_read = false;
+		if (block_read) {
+			ios->write_block(block_idx, block_buf);
+			block_read = false;
+		}
     }
 
     void RawDiskWriter::write(void* read_ptr, int bytes) {
         char* read_from = static_cast<char*>(read_ptr);
 		if (shift) {
-            if (!block_read) {
-                ios->read_block(block_idx, block_buf);
-                block_read = true;
-            }
-
+			if (!block_read) {
+				ios->read_block(block_idx, block_buf);
+				block_read = true;
+			}
             int prefix_size = min(BLOCK_SIZE-shift, bytes);
 			memcpy(block_buf+shift, read_from, prefix_size);
 
@@ -50,11 +51,12 @@ namespace filesystem::disk_utils {
 
         while (bytes >= BLOCK_SIZE) {
             ios->write_block(block_idx, read_from);
-            block_idx += 1;
+			block_idx += 1;
             read_from += BLOCK_SIZE; bytes -= BLOCK_SIZE;
         }
 
         if (bytes) {
+			ios->read_block(block_idx, block_buf);
             block_read = true;
             memcpy(block_buf, read_from, bytes);
             shift = bytes;
@@ -76,7 +78,6 @@ namespace filesystem::disk_utils {
                 ios->read_block(block_idx, block_buf);
                 block_read = true;
             }
-
             int prefix_size = min(BLOCK_SIZE-shift, bytes);
 			memcpy(write_to, block_buf + shift, prefix_size);
 
@@ -91,14 +92,15 @@ namespace filesystem::disk_utils {
 		}
 
         while (bytes >= BLOCK_SIZE) {
-            ios->read_block(block_idx, write_to); block_idx += 1;
+            ios->read_block(block_idx, write_to);
+			block_idx += 1;
             write_to += BLOCK_SIZE; bytes -= BLOCK_SIZE;
         }
 
         if (bytes) {
             ios->read_block(block_idx, block_buf);
             block_read = true;
-            memcpy(block_buf, write_to, bytes);
+            memcpy(write_to, block_buf, bytes);
             shift = bytes;
         }
     }
