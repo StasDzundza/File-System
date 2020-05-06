@@ -6,6 +6,7 @@
 #include "components/file_descriptor.h"
 #include "utils/disk_utils.h"
 #include "fs_config.h"
+#include <string>
 
 namespace filesystem {
 	using namespace config;
@@ -474,8 +475,10 @@ namespace filesystem {
 			DirectoryEntry cur_dir_entry;
 			_readFromFile(dir_oft_entry, &cur_dir_entry, sizeof(DirectoryEntry));
 			FileDescriptor fd = _getDescriptorByIndex(cur_dir_entry.fd_index);
-			std::string s;
-			filenames.push_back(cur_dir_entry.filename + ' ' + fd.file_length);
+			std::string s(cur_dir_entry.filename);
+			s.push_back(' ');
+			s += std::to_string(fd.file_length);
+			filenames.push_back(s);
 		}
 		return filenames;
 	}

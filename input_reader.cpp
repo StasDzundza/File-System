@@ -15,7 +15,7 @@ namespace filesystem {
 			{
 				if (command == "cr") {
 					std::string name;
-					if (!(ss >> name) || name.length() > 6 || name.length() == 0 || !ss.eof()) {
+					if (!(ss >> name) || name.length() >= MAX_FILENAME_LENGTH - 1 || name.length() == 0 || !ss.eof()) {
 						_incorrectSyntax();
 					}
 					else {
