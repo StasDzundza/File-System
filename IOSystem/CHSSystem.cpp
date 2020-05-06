@@ -60,6 +60,11 @@ namespace filesystem::io {
 		fclose(file_ptr);
 	}
 
+	void CHSSystem::save_system_state(const char* filename) {
+		_system_state_path = filename;
+		save_system_state();
+	}
+
 	void CHSSystem::restore_system_state() {
 		FILE *file_ptr;
 		assert(file_ptr = fopen(_system_state_path, "rb"));

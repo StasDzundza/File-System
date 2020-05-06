@@ -18,6 +18,7 @@ namespace filesystem::io {
 		virtual void write_block(int i, char *p) = 0;
 
 		virtual void save_system_state() = 0;
+		virtual void save_system_state(const char* filename) = 0;
 		virtual void restore_system_state() = 0;
 	protected:
 		const char* _system_state_path = nullptr;

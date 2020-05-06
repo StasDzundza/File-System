@@ -23,8 +23,11 @@ namespace filesystem {
 		int _reserveBytesForFile(FileDescriptor* fd, int bytes);
 		std::pair<DirectoryEntry, int> _findFileInDirectory(char filename[MAX_FILENAME_LENGTH]);
 		bool _fileExists(const char* filename);
+		void _closeAllFiles();
+		int _lseek(OFTEntry* entry, const FileDescriptor& fd, int pos);
 	public:
 		FileSystem();
+		~FileSystem();
 		int createFile(char filename[MAX_FILENAME_LENGTH]);
 		int destroyFile(char filename[MAX_FILENAME_LENGTH]);
 		int read(int fd_index, void* main_mem_ptr, int bytes);
@@ -33,8 +36,8 @@ namespace filesystem {
 		int open(char filename[MAX_FILENAME_LENGTH]);
 		int close(int fd_index);
 		std::vector<std::string> getAllDirectoryFiles();
-		int save();
-		int loadDisk(const char* filename);
+		int saveFS(const char* filename);
+		int loadFS(const char* filename);
 	private:
 		io::LBASystem ios;
 		OFT oft;

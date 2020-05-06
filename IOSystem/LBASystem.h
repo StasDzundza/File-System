@@ -17,6 +17,7 @@ namespace filesystem::io {
 		void write_block(int block_idx, char *copy_from_ptr) override;
 
 		void save_system_state() override;
+		void save_system_state(const char* filename) override;
 		void restore_system_state() override;
 
 	protected:

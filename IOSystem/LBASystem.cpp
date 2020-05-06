@@ -45,11 +45,16 @@ namespace filesystem::io {
 		fclose(file_ptr);
 	}
 
+	void LBASystem::save_system_state(const char*filename) {
+		_system_state_path = filename;
+		save_system_state();
+	}
+
 	void LBASystem::restore_system_state() {
 		FILE *file_ptr;
 		assert(file_ptr = fopen(_system_state_path, "rb"));
 
-		fwrite(_ldisk, sizeof(_ldisk), 1, file_ptr);
+		fread(_ldisk, sizeof(_ldisk), 1, file_ptr);
 		fclose(file_ptr);
 	}
 } // namespace filesystem::io
