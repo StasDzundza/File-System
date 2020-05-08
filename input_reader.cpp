@@ -35,7 +35,7 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.destroyFile((char*)name.c_str()) == RetStatus::OK) {
+						if (fs.destroyFile(name.c_str()) == RetStatus::OK) {
 							std::cout << "file " << name << " destroyed" << std::endl;
 						}
 						else {

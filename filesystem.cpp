@@ -7,6 +7,7 @@
 #include "utils/disk_utils.h"
 #include "utils/errors.h"
 #include "fs_config.h"
+#include <string>
 
 namespace filesystem {
 	using namespace config;
@@ -354,17 +355,11 @@ namespace filesystem {
 	{
 		std::pair<DirectoryEntry, int> dir_entry_info = _findFileInDirectory(filename);
 		DirectoryEntry file_dir_entry = dir_entry_info.first;
-		OFTEntry* file_oft_entry;
-		//if not found with such filename in directory or file is open
-		if (dir_entry_info.second == -1) {
-			return RetStatus::FAIL;
-		}
-		int oft_index = oft.getOftIndex(file_dir_entry.fd_index);
-		if (oft_index == -1) {
+		//if not found with such filename in directory or file is open 
+		if (dir_entry_info.second == -1 || oft.getOftIndex(file_dir_entry.fd_index) != -1) {
 			return RetStatus::FAIL;
 		}
 
-		file_oft_entry = oft.getFile(oft_index);
 		//free occupied disk blocks in bitmap
 		std::bitset<DISC_BLOCKS_NUM> free_blocks_set;
 		disk_utils::RawDiskReader fin(&ios, 0, 0);

@@ -8,15 +8,16 @@ namespace filesystem::components {
 		block_read(false), block_modified(false) {
 	}
 
-	int OFT::getOftIndex(int fd_index){
+	int OFT::getOftIndex(int fd_index) {
 		if (fd_index < 0 || fd_index > FD_OPENED_LIMIT)
 			return -1;
-		auto it = std::find_if(entries_buf.begin(), entries_buf.end(), 
+		auto tail = entries_buf.begin() + oft_size;
+		auto it = std::find_if(entries_buf.begin(), tail,
 			[fd_index](const OFTEntry& entry) {
 				return entry.fd_index == fd_index;
-		});
+			});
 
-		if (it == entries_buf.end())
+		if (it == tail)
 			return -1;
 		return it - entries_buf.begin();
 	}
