@@ -8,7 +8,7 @@
 #include "utils/errors.h"
 #include "fs_config.h"
 #include <string>
-#include <cstring>с
+#include <cstring>
 
 namespace filesystem {
 	using namespace config;
@@ -252,7 +252,7 @@ namespace filesystem {
 		for (int i = 0; i < num_of_files_in_dir; i++) {
 			DirectoryEntry cur_dir_entry;
 			_readFromFile(dir_oft_entry, dir_fd, &cur_dir_entry, sizeof(DirectoryEntry));
-			if (std::strcmp(cur_dir_entry.filename, filename) == 0) {
+			if (std::strncmp(cur_dir_entry.filename, filename, MAX_FILENAME_LENGTH) == 0) {
 				dir_entry_idx = i;
 				return std::make_pair(cur_dir_entry, dir_entry_idx);
 			}
@@ -475,7 +475,7 @@ namespace filesystem {
 		vector<std::string> filenames;
 		OFTEntry* dir_oft_entry = oft.getFile(0);
 		FileDescriptor dir_fd = _getDescriptorByIndex(0);
-		lseek(0, 0);
+        _lseek(dir_oft_entry,dir_fd,0);
 		int num_of_files_in_dir = dir_fd.file_length / sizeof(DirectoryEntry);
 		for (int i = 0; i < num_of_files_in_dir; i++) {
 			DirectoryEntry cur_dir_entry;

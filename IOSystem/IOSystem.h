@@ -25,6 +25,5 @@ namespace filesystem::io {
 		void save_system_state(const char* filename);
 	protected:
 		const char* _system_state_path;
-		bool _fs_saved;
 	};
 } // namespace filesystem::io

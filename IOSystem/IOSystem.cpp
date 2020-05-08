@@ -27,11 +27,10 @@ namespace filesystem::io {
 		_save_system_state();
 	}
 	IOSystemInterface::IOSystemInterface() :
-		_system_state_path(nullptr), _fs_saved(false) {
+		_system_state_path(nullptr) {
 	}
 	void IOSystemInterface::save_system_state(const char * filename) {
 		_system_state_path = filename;
 		_save_system_state();
-		_fs_saved = true;
 	}
 } // namespace filesystem::io
