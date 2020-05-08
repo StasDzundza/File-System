@@ -16,14 +16,13 @@ namespace filesystem::io {
 		assert(system_state_path);
 		_system_state_path = system_state_path;
 
-		_fs_saved = false;
 		if (_file_exists(_system_state_path)) {
 			_restore_system_state();
 		}
 	}
 	void IOSystemInterface::_clean_up()
 	{
-		if (!_system_state_path || _fs_saved)
+		if (!_system_state_path)
 			return;
 		_save_system_state();
 	}
