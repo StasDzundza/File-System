@@ -9,20 +9,18 @@ namespace filesystem::io {
 	using namespace io::config;
 	class CHSSystem : public IOSystemInterface {
 	private:
-		typedef std::tuple<int, int, int> chs_idx;
 		bool _check_config();
+		void _save_system_state() override;
+		void _restore_system_state() override;
+		typedef std::tuple<int, int, int> chs_idx;
 		chs_idx lba_to_chs(int logical_block_idx);
 	public:
 		CHSSystem();
-		void init(int c, int t, int s, int b, const char *system_state_path);
 		~CHSSystem();
+		void init(int c, int t, int s, int b, const char *system_state_path);
 
 		void read_block(int block_idx, char *copy_to_ptr) override;
 		void write_block(int block_idx, char *copy_from_ptr) override;
-
-		void save_system_state() override;
-		void save_system_state(const char* filename) override;
-		void restore_system_state() override;
 
 	private:
 		int c, t, s, b;

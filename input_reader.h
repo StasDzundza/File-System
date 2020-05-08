@@ -5,7 +5,7 @@
 #include "filesystem.h"
 
 namespace filesystem {
-    
+
     class InputReader
     {
     public:

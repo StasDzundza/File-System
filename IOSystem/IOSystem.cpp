@@ -8,11 +8,6 @@
 
 
 namespace filesystem::io {
-	void IOSystemInterface::_close_fs() {
-		if (!_system_state_path)
-			return;
-		save_system_state();
-	}
 	bool IOSystemInterface::_file_exists(const char *path) const {
 		struct stat buffer;
 		return (stat(path, &buffer) == 0);
@@ -20,8 +15,24 @@ namespace filesystem::io {
 	void IOSystemInterface::_init(const char * system_state_path) {
 		assert(system_state_path);
 		_system_state_path = system_state_path;
+
+		_fs_saved = false;
 		if (_file_exists(_system_state_path)) {
-			restore_system_state();
+			_restore_system_state();
 		}
+	}
+	void IOSystemInterface::_clean_up()
+	{
+		if (!_system_state_path || _fs_saved)
+			return;
+		_save_system_state();
+	}
+	IOSystemInterface::IOSystemInterface() :
+		_system_state_path(nullptr), _fs_saved(false) {
+	}
+	void IOSystemInterface::save_system_state(const char * filename) {
+		_system_state_path = filename;
+		_save_system_state();
+		_fs_saved = true;
 	}
 } // namespace filesystem::io

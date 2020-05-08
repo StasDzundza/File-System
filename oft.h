@@ -14,10 +14,12 @@ namespace filesystem::components {
 
 	class OFT {
 	public:
-		OFTEntry* findFile(int fd_index);
-		OFTEntry* getFile(int oft_index);
+		int getOftIndex(int fd_index);
 		int addFile(int fd_index);
-		int removeFile(int fd_index);
+
+		OFTEntry* getFile(int oft_index);
+		void removeOftEntry(int oft_index);
+
 		int getNumOFOpenFiles();
 	private:
 		int oft_size = 0;

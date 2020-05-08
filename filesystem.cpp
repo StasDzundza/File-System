@@ -5,12 +5,13 @@
 #include <bitset>
 #include "components/file_descriptor.h"
 #include "utils/disk_utils.h"
+#include "utils/errors.h"
 #include "fs_config.h"
-#include <string>
 
 namespace filesystem {
 	using namespace config;
 	using namespace std;
+	using namespace errors;
 
 	FileSystem::FileSystem() {
 		loadFS(SYSTEM_PATH);
@@ -18,7 +19,6 @@ namespace filesystem {
 
 	FileSystem::~FileSystem(){
 		_closeAllFiles();
-		ios.save_system_state();
 	}
 
 	FileDescriptor FileSystem::_getDescriptorByIndex(int fd_index) {
@@ -36,7 +36,7 @@ namespace filesystem {
 		Save filesystem data to disk: write bitmap, 
 		directory descriptor,empty file descriptors.
 	*/
-	void FileSystem::_initFileSystem() {	
+	void FileSystem::_initFileSystem() {
 		disk_utils::RawDiskWriter fout(&ios, 0, 0);
 
 		// mark first k first bits as occupied
@@ -64,27 +64,25 @@ namespace filesystem {
 		oft.addFile(0);
 		if (dir_fd.file_length > 0) {
 			OFTEntry *directory_oft = oft.getFile(0);
-			ios.read_block(0, directory_oft->read_write_buffer);
+			ios.read_block(dir_fd.arr_block_num[0], directory_oft->read_write_buffer);
 			directory_oft->block_read = true;
 		}
 	}
 
-	int FileSystem::_readFromFile(OFTEntry* f_entry,  void* write_ptr, int bytes) {
+	int FileSystem::_readFromFile(OFTEntry* f_entry, const FileDescriptor& fd, void* write_ptr, int bytes) {
 		// Check if file has enough bytes to read
-		FileDescriptor fd = _getDescriptorByIndex(f_entry->fd_index);
 		if (fd.file_length - f_entry->fpos < bytes) {
-			return EXIT_FAILURE;
+			return RetStatus::FAIL;
 		}
 
 		char* write_to = static_cast<char*>(write_ptr);
 		int arr_block_idx = f_entry->fpos/BLOCK_SIZE, shift = f_entry->fpos % BLOCK_SIZE;
-		if (!f_entry->block_read) {
-			// if block isn't read yet, read the respective block
-			ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
-			f_entry->block_read = true; // block isn't modified for sure
-		}
-
 		if (shift || f_entry->block_modified) {
+			if (!f_entry->block_read) {
+				// if block isn't read yet, read the respective block
+				ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+				f_entry->block_read = true; // block isn't modified for sure
+			}
             int prefix_size = min(BLOCK_SIZE-shift, bytes);
 			memcpy(write_to, f_entry->read_write_buffer + shift, prefix_size);
 			write_to += prefix_size; bytes -= prefix_size;
@@ -93,7 +91,7 @@ namespace filesystem {
             shift = (shift + prefix_size) % BLOCK_SIZE;
             if(shift) {
                 // bytes < BLOCK_SIZE - shift
-				return EXIT_SUCCESS;
+				return RetStatus::OK;
 			}
 		
 			if (f_entry->block_modified) {
@@ -109,6 +107,7 @@ namespace filesystem {
 			// Here we may use external call where we pass f_entry->read_write_buffer
 			ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
 			f_entry->fpos += BLOCK_SIZE; arr_block_idx += 1;
+			f_entry->block_read = true;
 
 			memcpy(write_to, f_entry->read_write_buffer, BLOCK_SIZE);
 			write_to += BLOCK_SIZE; bytes -= BLOCK_SIZE;
@@ -120,17 +119,16 @@ namespace filesystem {
 			memcpy(write_to, f_entry->read_write_buffer, bytes);
 			f_entry->fpos += bytes; f_entry->block_read = true;
 		}
-		return EXIT_SUCCESS;
+		return RetStatus::OK;
 	}
 
-	int FileSystem::_writeToFile(OFTEntry* entry, void* read_ptr, int bytes)
+	int FileSystem::_writeToFile(OFTEntry* entry, FileDescriptor& fd, void* read_ptr, int bytes)
 	{
-		FileDescriptor fd = _getDescriptorByIndex(entry->fd_index);
 		// before reading/writing blocks, we must ensure the file can store requsted bytes
 		// and allocate the necessary bytes
 		int bytes_to_alloc = max(0, bytes - fd.file_length + entry->fpos);
-		if (_reserveBytesForFile(&fd, bytes_to_alloc) == EXIT_FAILURE) {
-			return EXIT_FAILURE;
+		if (_reserveBytesForFile(&fd, bytes_to_alloc) == RetStatus::FAIL) {
+			return RetStatus::FAIL;
 		}
 		else {
 			char* read_from = static_cast<char*>(read_ptr);
@@ -171,7 +169,7 @@ namespace filesystem {
 				disk_utils::RawDiskWriter fout(&ios, fd_block_idx, fd_offset);
 				fout.write(&fd, sizeof(FileDescriptor));
 			}
-			return EXIT_SUCCESS;
+			return RetStatus::OK;
 		}
 	}
 
@@ -189,7 +187,7 @@ namespace filesystem {
 
 			if (bytes < 0 || num_of_new_blocks == 0) {
 				// No need to read the bitset, add any blocks
-				return EXIT_SUCCESS;
+				return RetStatus::OK;
 			}
 
 			std::bitset<DISC_BLOCKS_NUM> free_blocks_set;
@@ -213,43 +211,45 @@ namespace filesystem {
 				}
 				disk_utils::RawDiskWriter fout(&ios, 0, 0);
 				fout.write(&free_blocks_set, sizeof(std::bitset<DISC_BLOCKS_NUM>));
-				return EXIT_SUCCESS;
+				return RetStatus::OK;
 			}
 			else {
-				return EXIT_FAILURE;
+				return RetStatus::FAIL;
 			}
 		}
 		else {
-			return EXIT_FAILURE;
+			return RetStatus::OK;
 		}
 	}
 
 	int FileSystem::read(int fd_index, void* main_mem_ptr, int bytes) {
-		bool read_ok = bytes > 0;
-		if (!read_ok)
-			return 0;
-		OFTEntry* oft_ptr = oft.findFile(fd_index);
-		return oft_ptr && _readFromFile(oft_ptr, main_mem_ptr, bytes) == EXIT_SUCCESS;
+		int oft_index = oft.getOftIndex(fd_index);
+		if (bytes < 0 || oft_index == -1)
+			return RetStatus::FAIL;
+		OFTEntry* file_entry = oft.getFile(oft_index);
+		FileDescriptor fd = _getDescriptorByIndex(fd_index);
+		return _readFromFile(file_entry, fd, main_mem_ptr, bytes);
 	}
 
 	int FileSystem::write(int fd_index, void* main_mem_ptr, int bytes) {
- 		bool read_ok = bytes > 0;
-		if (!read_ok)
-			return 0;
-		OFTEntry* oft_ptr = oft.findFile(fd_index);
-		return oft_ptr && _writeToFile(oft_ptr, main_mem_ptr, bytes) == EXIT_SUCCESS;
+		int oft_index = oft.getOftIndex(fd_index);
+		if (bytes < 0 || oft_index == -1)
+			return RetStatus::FAIL;
+		OFTEntry* file_entry = oft.getFile(oft_index);
+		FileDescriptor fd = _getDescriptorByIndex(fd_index);
+		return _writeToFile(file_entry, fd, main_mem_ptr, bytes);
 	}
 
-	std::pair<DirectoryEntry, int> FileSystem::_findFileInDirectory(char filename[MAX_FILENAME_LENGTH])
+	std::pair<DirectoryEntry, int> FileSystem::_findFileInDirectory(const char* filename)
 	{
-		OFTEntry* dir_oft_entry = oft.findFile(0);
+		OFTEntry* dir_oft_entry = oft.getFile(0);
 		FileDescriptor dir_fd = _getDescriptorByIndex(0);
 		_lseek(dir_oft_entry,dir_fd, 0);
 		int num_of_files_in_dir = dir_fd.file_length / sizeof(DirectoryEntry);
 		int dir_entry_idx = 0;
 		for (int i = 0; i < num_of_files_in_dir; i++) {
 			DirectoryEntry cur_dir_entry;
-			_readFromFile(dir_oft_entry, &cur_dir_entry, sizeof(DirectoryEntry));
+			_readFromFile(dir_oft_entry, dir_fd, &cur_dir_entry, sizeof(DirectoryEntry));
 			if (std::strcmp(cur_dir_entry.filename, filename) == 0) {
 				dir_entry_idx = i;
 				return std::make_pair(cur_dir_entry, dir_entry_idx);
@@ -283,7 +283,7 @@ namespace filesystem {
 	{
 		if (file_entry != nullptr) {
 			if (pos < 0 || pos > fd.file_length) {
-				return EXIT_FAILURE;
+				return RetStatus::FAIL;
 			}
 			int cur_pos_disk_block = fd.arr_block_num[file_entry->fpos / BLOCK_SIZE];
 			int new_pos_disk_block = fd.arr_block_num[pos / BLOCK_SIZE];
@@ -296,20 +296,19 @@ namespace filesystem {
 				file_entry->block_modified = false;
 			}
 			file_entry->fpos = pos;
-			return EXIT_SUCCESS;
+			return RetStatus::OK;
 		}
 		else {
-			return EXIT_FAILURE;
+			return RetStatus::FAIL;
 		}
 	}
 
-	int FileSystem::createFile(char filename[MAX_FILENAME_LENGTH])
+	int FileSystem::createFile(const char* filename)
 	{
 		FileDescriptor dir_fd = _getDescriptorByIndex(0);
 		int num_files_created = dir_fd.file_length / sizeof(DirectoryEntry);
-
 		if (num_files_created == FD_CREATED_LIMIT || _findFileInDirectory(filename).second != -1)
-			return EXIT_FAILURE;
+			return RetStatus::FAIL;
 
 		// compute the offset before looking for empty descriptor
 		int bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor);
@@ -330,37 +329,42 @@ namespace filesystem {
 		}
 		if (!free_fd_index) {
 			// zero free file descriptors found
-			return EXIT_FAILURE;
+			return RetStatus::FAIL;
 		}
 
 		DirectoryEntry new_entry(free_fd_index, filename);
 
-		OFTEntry* dir = oft.findFile(0);
+		OFTEntry* dir = oft.getFile(0);
 		_lseek(dir, _getDescriptorByIndex(0), num_files_created * sizeof(DirectoryEntry));
 
-		if (_writeToFile(dir, &new_entry, sizeof(DirectoryEntry)) == EXIT_SUCCESS) {
+		if (_writeToFile(dir, dir_fd, &new_entry, sizeof(DirectoryEntry))) {
 			bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor)*free_fd_index;
 			int free_fd_block_idx = bytes / BLOCK_SIZE;
 			int free_fd_offset = bytes % BLOCK_SIZE;
 			disk_utils::RawDiskWriter fout(&ios, free_fd_block_idx, free_fd_offset);
 			fout.write(&free_fd, sizeof(FileDescriptor));
-			return EXIT_SUCCESS;
+			return RetStatus::OK;
 		}
 		else {
-			return EXIT_FAILURE;
+			return RetStatus::FAIL;
 		}
 	}
 
-	int FileSystem::destroyFile(char filename[MAX_FILENAME_LENGTH])
+	int FileSystem::destroyFile(const char* filename)
 	{
 		std::pair<DirectoryEntry, int> dir_entry_info = _findFileInDirectory(filename);
 		DirectoryEntry file_dir_entry = dir_entry_info.first;
 		OFTEntry* file_oft_entry;
 		//if not found with such filename in directory or file is open
-		if (dir_entry_info.second == -1 || ((file_oft_entry = oft.findFile(file_dir_entry.fd_index)))) {
-			return EXIT_FAILURE;
+		if (dir_entry_info.second == -1) {
+			return RetStatus::FAIL;
+		}
+		int oft_index = oft.getOftIndex(file_dir_entry.fd_index);
+		if (oft_index == -1) {
+			return RetStatus::FAIL;
 		}
 
+		file_oft_entry = oft.getFile(oft_index);
 		//free occupied disk blocks in bitmap
 		std::bitset<DISC_BLOCKS_NUM> free_blocks_set;
 		disk_utils::RawDiskReader fin(&ios, 0, 0);
@@ -380,20 +384,21 @@ namespace filesystem {
 		int bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor)*file_dir_entry.fd_index;
 		int block_idx = bytes / BLOCK_SIZE, offset = bytes % BLOCK_SIZE;
 		disk_utils::RawDiskWriter fout(&ios, block_idx, offset);
+
 		FileDescriptor empty_fd;
 		fout.write(&empty_fd, sizeof(FileDescriptor));
 		fout.flush();
 
 		//remove file entry from directory(swap last dir entry and entry of file which should be destroyed. Then decrease dir length)
-		OFTEntry* dir_oft = oft.findFile(0);
+		OFTEntry* dir_oft = oft.getFile(0);
 		FileDescriptor dir_fd = _getDescriptorByIndex(0);
 		int last_dir_entry_offset = dir_fd.file_length - sizeof(DirectoryEntry);
 		_lseek(dir_oft, dir_fd, last_dir_entry_offset);
 		DirectoryEntry last_dir_entry;
-		_readFromFile(dir_oft, &last_dir_entry, sizeof(DirectoryEntry));
+		_readFromFile(dir_oft, dir_fd, &last_dir_entry, sizeof(DirectoryEntry));
 		int remove_file_offset = sizeof(DirectoryEntry) * dir_entry_info.second;
 		_lseek(dir_oft, dir_fd, remove_file_offset);
-		_writeToFile(dir_oft, &last_dir_entry, sizeof(DirectoryEntry));
+		_writeToFile(dir_oft, dir_fd, &last_dir_entry, sizeof(DirectoryEntry));
 		dir_fd.file_length -= sizeof(DirectoryEntry);
 
 		//update directory descriptor
@@ -420,30 +425,34 @@ namespace filesystem {
 			disk_utils::RawDiskWriter f(&ios, block_idx, offset);
 			f.write(&dir_fd, sizeof(FileDescriptor));
 		}
-		
-		return EXIT_SUCCESS;
+
+		return RetStatus::OK;
 	}
 
 	int FileSystem::lseek(int fd_index, int pos)
 	{
-		OFTEntry* file_entry = oft.findFile(fd_index);
+		int oft_index = oft.getOftIndex(fd_index);
+		if (oft_index == -1)
+			return RetStatus::FAIL;
+		OFTEntry* file_entry = oft.getFile(oft_index);
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
 		return _lseek(file_entry, fd, pos);
 	}
 
-	int FileSystem::open(char filename[MAX_FILENAME_LENGTH])
+	int FileSystem::open(const char* filename)
 	{
 		std::pair<DirectoryEntry, int> file = _findFileInDirectory(filename);
 		if (file.second == -1) {
 			return -1;
 		}
 		int fd_index = file.first.fd_index;
-		if (oft.addFile(fd_index) == EXIT_FAILURE) {
+		int oft_index = oft.addFile(fd_index);
+		if (oft_index == -1) {
 			return -1;
 		}
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
-		OFTEntry* oft_entry = oft.findFile(fd_index);
 		if (fd.file_length != 0) {
+			OFTEntry* oft_entry = oft.getFile(oft_index);
 			ios.read_block(fd.arr_block_num[0], oft_entry->read_write_buffer);
 			oft_entry->block_read = true;
 		}
@@ -452,28 +461,29 @@ namespace filesystem {
 
 	int FileSystem::close(int fd_index)
 	{
-		OFTEntry* file_entry = oft.findFile(fd_index);
-		if (!file_entry) {
-			return EXIT_FAILURE;
+		int oft_index = oft.getOftIndex(fd_index);
+		if (oft_index == -1) {
+			return RetStatus::FAIL;
 		}
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
+		OFTEntry *file_entry = oft.getFile(oft_index);
 		if (file_entry->block_modified) {
 			ios.write_block(fd.arr_block_num[file_entry->fpos/BLOCK_SIZE], file_entry->read_write_buffer);
 		}
-		oft.removeFile(fd_index);
-		return EXIT_SUCCESS;
+		oft.removeOftEntry(oft_index);
+		return RetStatus::OK;
 	}
 
 	vector<std::string> FileSystem::getAllDirectoryFiles()
 	{
 		vector<std::string> filenames;
-		OFTEntry* dir_oft_entry = oft.findFile(0);
+		OFTEntry* dir_oft_entry = oft.getFile(0);
 		FileDescriptor dir_fd = _getDescriptorByIndex(0);
 		lseek(0, 0);
 		int num_of_files_in_dir = dir_fd.file_length / sizeof(DirectoryEntry);
 		for (int i = 0; i < num_of_files_in_dir; i++) {
 			DirectoryEntry cur_dir_entry;
-			_readFromFile(dir_oft_entry, &cur_dir_entry, sizeof(DirectoryEntry));
+			_readFromFile(dir_oft_entry, dir_fd, &cur_dir_entry, sizeof(DirectoryEntry));
 			FileDescriptor fd = _getDescriptorByIndex(cur_dir_entry.fd_index);
 			std::string s(cur_dir_entry.filename);
 			s.push_back(' ');
@@ -487,7 +497,7 @@ namespace filesystem {
 	{
 		_closeAllFiles();
 		ios.save_system_state(filename);
-		return EXIT_SUCCESS;
+		return RetStatus::OK;
 	}
 
 	int FileSystem::loadFS(const char* filename)

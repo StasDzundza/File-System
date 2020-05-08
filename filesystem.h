@@ -18,23 +18,25 @@ namespace filesystem {
 		void _restoreFileSystem();
 
 		FileDescriptor _getDescriptorByIndex(int fd_index);
-		int _readFromFile(OFTEntry* entry, void* write_ptr, int bytes);
-		int _writeToFile(OFTEntry* entry, void* read_ptr, int bytes);
+		int _readFromFile(OFTEntry* entry, const FileDescriptor& fd, void* write_ptr, int bytes);
+		int _writeToFile(OFTEntry* entry, FileDescriptor& fd, void* read_ptr, int bytes);
 		int _reserveBytesForFile(FileDescriptor* fd, int bytes);
-		std::pair<DirectoryEntry, int> _findFileInDirectory(char filename[MAX_FILENAME_LENGTH]);
+		std::pair<DirectoryEntry, int> _findFileInDirectory(const char* filename);
 		bool _fileExists(const char* filename);
 		void _closeAllFiles();
 		int _lseek(OFTEntry* entry, const FileDescriptor& fd, int pos);
 	public:
 		FileSystem();
 		~FileSystem();
-		int createFile(char filename[MAX_FILENAME_LENGTH]);
-		int destroyFile(char filename[MAX_FILENAME_LENGTH]);
+
+		int createFile(const char* filename);
+		int destroyFile(const char* filename);
 		int read(int fd_index, void* main_mem_ptr, int bytes);
 		int write(int fd_index, void* main_mem_ptr, int bytes);
 		int lseek(int fd_index, int pos);
-		int open(char filename[MAX_FILENAME_LENGTH]);
+		int open(const char* filename);
 		int close(int fd_index);
+
 		std::vector<std::string> getAllDirectoryFiles();
 		int saveFS(const char* filename);
 		int loadFS(const char* filename);

@@ -15,9 +15,9 @@ namespace filesystem::io {
 	CHSSystem::chs_idx CHSSystem::lba_to_chs(int logical_block_idx) {
 		assert(logical_block_idx >= 0 && logical_block_idx < MAX_BLOCKS_NUM);
 
-		int c_idx = logical_block_idx / (2 * t * s);
-		int h_idx = (logical_block_idx / s) % (2 * t);
-		int s_idx = logical_block_idx % s + 1;
+		int c_idx = logical_block_idx / (2 * t * s);    // LBA / (HPC * SPT)
+		int h_idx = (logical_block_idx / s) % (2 * t);  // (LBA / SPT) % HPC
+		int s_idx = logical_block_idx % s + 1;          // (LBA % SPT) + 1
 		return { c_idx, h_idx, s_idx };
 	}
 
@@ -25,15 +25,15 @@ namespace filesystem::io {
 	CHSSystem::CHSSystem() :
 		c(0), t(0), s(0), b(0) {
 	}
+	CHSSystem::~CHSSystem() {
+		_clean_up();
+	}
 
 	void CHSSystem::init(int c, int t, int s, int b, const char * system_state_path) {
 		this->c = c; this->s = s; this->t = t; this->b = b;
 		assert(_check_config());
 
 		IOSystemInterface::_init(system_state_path);
-	}
-	CHSSystem::~CHSSystem() {
-		_close_fs();
 	}
 
 	void CHSSystem::read_block(int block_idx, char * copy_to_ptr) {
@@ -52,7 +52,7 @@ namespace filesystem::io {
 		memcpy(_ldisk[c_idx][h_idx / 2][s_idx - 1], copy_from_ptr, sizeof(char) * b);
 	}
 
-	void CHSSystem::save_system_state() {
+	void CHSSystem::_save_system_state() {
 		FILE *file_ptr;
 		assert(file_ptr = fopen(_system_state_path, "wb"));
 
@@ -60,12 +60,7 @@ namespace filesystem::io {
 		fclose(file_ptr);
 	}
 
-	void CHSSystem::save_system_state(const char* filename) {
-		_system_state_path = filename;
-		save_system_state();
-	}
-
-	void CHSSystem::restore_system_state() {
+	void CHSSystem::_restore_system_state() {
 		FILE *file_ptr;
 		assert(file_ptr = fopen(_system_state_path, "rb"));
 

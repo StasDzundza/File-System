@@ -22,8 +22,9 @@ namespace filesystem::io {
 	}
 
 	LBASystem::~LBASystem() {
-		_close_fs();
+		_clean_up();
 	}
+
 
 	void LBASystem::read_block(int block_idx, char *copy_to_ptr) {
 		assert(block_idx >= 0 && block_idx < _blocks_num && copy_to_ptr);
@@ -37,24 +38,23 @@ namespace filesystem::io {
 		memcpy(_ldisk[block_idx], copy_from_ptr, sizeof(char) * _block_len);
 	}
 
-	void LBASystem::save_system_state() {
+	void LBASystem::_save_system_state() {
 		FILE *file_ptr;
 		assert(file_ptr = fopen(_system_state_path, "wb"));
 
-		fwrite(_ldisk, sizeof(_ldisk), 1, file_ptr);
+		for (size_t i = 0; i < _blocks_num; ++i) {
+			fwrite(_ldisk[i], _block_len, 1, file_ptr);
+		}
 		fclose(file_ptr);
 	}
 
-	void LBASystem::save_system_state(const char*filename) {
-		_system_state_path = filename;
-		save_system_state();
-	}
-
-	void LBASystem::restore_system_state() {
+	void LBASystem::_restore_system_state() {
 		FILE *file_ptr;
 		assert(file_ptr = fopen(_system_state_path, "rb"));
 
-		fread(_ldisk, sizeof(_ldisk), 1, file_ptr);
+		for (size_t i = 0; i < _blocks_num; ++i) {
+			fread(_ldisk[i], _block_len, 1, file_ptr);
+		}
 		fclose(file_ptr);
 	}
 } // namespace filesystem::io

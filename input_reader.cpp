@@ -1,6 +1,8 @@
 #include "input_reader.h"
+#include "utils/errors.h"
 
 namespace filesystem {
+	using namespace errors;
 
 	void InputReader::start()
 	{
@@ -19,7 +21,7 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.createFile((char*)name.c_str()) == EXIT_SUCCESS) {
+						if (fs.createFile(name.c_str()) == RetStatus::OK) {
 							std::cout << "file " << name << " created" << std::endl;
 						}
 						else {
@@ -33,7 +35,7 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.destroyFile((char*)name.c_str()) == EXIT_SUCCESS) {
+						if (fs.destroyFile((char*)name.c_str()) == RetStatus::OK) {
 							std::cout << "file " << name << " destroyed" << std::endl;
 						}
 						else {
@@ -47,7 +49,7 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						int fd_index = fs.open((char*)name.c_str());
+						int fd_index = fs.open(name.c_str());
 						if (fd_index != -1) {
 							std::cout << "file " << name << " opened, index = " << fd_index << std::endl;
 						}
@@ -62,7 +64,7 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.close(fd_index) == EXIT_SUCCESS) {
+						if (fs.close(fd_index) == RetStatus::OK) {
 							std::cout << "file " << fd_index << " closed" <<  std::endl;
 						}
 						else {
@@ -77,7 +79,7 @@ namespace filesystem {
 					}
 					else {
 						char* char_to_read = new char[count];
-						if (fs.read(fd_index, char_to_read, count) != 0) {
+						if (fs.read(fd_index, char_to_read, count) != RetStatus::FAIL) {
 							std::cout << count << " bytes read: ";
 							for (int i = 0; i < count; i++) {
 								std::cout << char_to_read[i];
@@ -99,7 +101,7 @@ namespace filesystem {
 					else {
 						char* char_to_write = new char[count];
 						std::fill(char_to_write, char_to_write + count, c);
-						if (fs.write(fd_index, char_to_write, count) != 0) {
+						if (fs.write(fd_index, char_to_write, count) != RetStatus::FAIL) {
 							std::cout << count << " bytes written" << std::endl;
 						}
 						else {
@@ -114,7 +116,7 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.lseek(fd_index, pos) == EXIT_SUCCESS) {
+						if (fs.lseek(fd_index, pos) == RetStatus::OK) {
 							std::cout << "current position is " << pos << std::endl;
 						}
 						else {
@@ -137,7 +139,7 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.loadFS((char*)filename.c_str()) == 1) {
+						if (fs.loadFS(filename.c_str()) == 1) {
 							std::cout << "disk restored" << std::endl;
 						}
 						else {
@@ -151,7 +153,7 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.saveFS(filename.c_str()) == EXIT_SUCCESS) {
+						if (fs.saveFS(filename.c_str()) == RetStatus::OK) {
 							std::cout << "disk saved" << std::endl;
 						}
 						else {

@@ -2,11 +2,16 @@
 
 namespace filesystem::io {
 	class IOSystemInterface {
+	private:
+		virtual void _save_system_state() = 0;
+		virtual void _restore_system_state() = 0;
 	protected:
-		void _close_fs();
 		bool _file_exists(const char *path) const;
 		void _init(const char* _system_state_path);
+		void _clean_up();
 	public:
+		IOSystemInterface();
+
 		/* Copies the logical disk block i into memory starting from the
 		 * address specified by the pointer p. The number of characters copied
 		 * equals to the logical block length. */
@@ -17,10 +22,9 @@ namespace filesystem::io {
 		 * the logical disk block i. */
 		virtual void write_block(int i, char *p) = 0;
 
-		virtual void save_system_state() = 0;
-		virtual void save_system_state(const char* filename) = 0;
-		virtual void restore_system_state() = 0;
+		void save_system_state(const char* filename);
 	protected:
-		const char* _system_state_path = nullptr;
+		const char* _system_state_path;
+		bool _fs_saved;
 	};
 } // namespace filesystem::io
