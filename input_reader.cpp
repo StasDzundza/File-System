@@ -59,13 +59,13 @@ namespace filesystem {
 					}
 				}
 				else if (command == "cl") {
-					int fd_index;
-					if (!(ss >> fd_index) || !ss.eof()) {
+					int oft_index;
+					if (!(ss >> oft_index) || !ss.eof()) {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.close(fd_index) == RetStatus::OK) {
-							std::cout << "file " << fd_index << " closed" <<  std::endl;
+						if (fs.close(oft_index) == RetStatus::OK) {
+							std::cout << "file " << oft_index << " closed" <<  std::endl;
 						}
 						else {
 							_error();

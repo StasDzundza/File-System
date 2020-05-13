@@ -455,10 +455,10 @@ namespace filesystem {
 		return oft_index;
 	}
 
-	int FileSystem::close(int fd_index)
+	int FileSystem::close(int oft_index)
 	{
-		int oft_index = oft.getOftIndex(fd_index);
-		if (oft_index == -1) {
+		int fd_index = oft.getFDIndexByOftIndex(oft_index);
+		if (fd_index == -1) {
 			return RetStatus::FAIL;
 		}
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);

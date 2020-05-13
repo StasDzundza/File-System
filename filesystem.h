@@ -35,7 +35,7 @@ namespace filesystem {
 		int write(int fd_index, void* main_mem_ptr, int bytes);
 		int lseek(int fd_index, int pos);
 		int open(const char* filename);
-		int close(int fd_index);
+		int close(int oft_index);
 
 		std::vector<std::string> getAllDirectoryFiles();
 		int saveFS(const char* filename);
