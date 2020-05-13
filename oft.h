@@ -21,6 +21,7 @@ namespace filesystem::components {
 		void removeOftEntry(int oft_index);
 
 		int getNumOFOpenFiles();
+		int getFDIndexByOftIndex(int oft_index);
 	private:
 		int oft_size = 0;
 		std::array<OFTEntry, FD_OPENED_LIMIT> entries_buf;
