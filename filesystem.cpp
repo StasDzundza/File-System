@@ -74,7 +74,7 @@ namespace filesystem {
 	int FileSystem::_readFromFile(OFTEntry* f_entry, const FileDescriptor& fd, void* write_ptr, int bytes) {
 		// Check if file has enough bytes to read
 		if (fd.file_length - f_entry->fpos < bytes) {
-			return RetStatus::FAIL;
+			bytes = fd.file_length - f_entry->fpos;
 		}
 
 		char* write_to = static_cast<char*>(write_ptr);
@@ -93,7 +93,7 @@ namespace filesystem {
             shift = (shift + prefix_size) % BLOCK_SIZE;
             if(shift) {
                 // bytes < BLOCK_SIZE - shift
-				return RetStatus::OK;
+				return bytes;
 			}
 		
 			if (f_entry->block_modified) {
@@ -121,7 +121,7 @@ namespace filesystem {
 			memcpy(write_to, f_entry->read_write_buffer, bytes);
 			f_entry->fpos += bytes; f_entry->block_read = true;
 		}
-		return RetStatus::OK;
+		return bytes;
 	}
 
 	int FileSystem::_writeToFile(OFTEntry* entry, FileDescriptor& fd, void* read_ptr, int bytes)
