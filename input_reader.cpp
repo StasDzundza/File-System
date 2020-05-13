@@ -73,15 +73,16 @@ namespace filesystem {
 					}
 				}
 				else if (command == "rd") {
-					int fd_index, count;
-					if (!(ss >> fd_index, ss >> count) || !ss.eof()) {
+					int oft_index, count;
+					if (!(ss >> oft_index, ss >> count) || !ss.eof()) {
 						_incorrectSyntax();
 					}
 					else {
 						char* char_to_read = new char[count];
-						if (fs.read(fd_index, char_to_read, count) != RetStatus::FAIL) {
+						int count_read = fs.read(oft_index, char_to_read, count);
+						if (count_read != RetStatus::FAIL) {
 							std::cout << count << " bytes read: ";
-							for (int i = 0; i < count; i++) {
+							for (int i = 0; i < count_read; i++) {
 								std::cout << char_to_read[i];
 							}
 							std::cout << std::endl;

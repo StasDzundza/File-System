@@ -224,10 +224,14 @@ namespace filesystem {
 		}
 	}
 
-	int FileSystem::read(int fd_index, void* main_mem_ptr, int bytes) {
-		int oft_index = oft.getOftIndex(fd_index);
-		if (bytes < 0 || oft_index == -1)
+	int FileSystem::read(int oft_index, void* main_mem_ptr, int bytes) {
+		int fd_index = oft.getFDIndexByOftIndex(oft_index);
+		if (fd_index == -1) {
 			return RetStatus::FAIL;
+		}
+		if (bytes < 0 || fd_index == -1) {
+			return RetStatus::FAIL;
+		}
 		OFTEntry* file_entry = oft.getFile(oft_index);
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
 		return _readFromFile(file_entry, fd, main_mem_ptr, bytes);
