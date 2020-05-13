@@ -81,7 +81,7 @@ namespace filesystem {
 						char* char_to_read = new char[count];
 						int count_read = fs.read(oft_index, char_to_read, count);
 						if (count_read != RetStatus::FAIL) {
-							std::cout << count << " bytes read: ";
+							std::cout << count_read << " bytes read: ";
 							for (int i = 0; i < count_read; i++) {
 								std::cout << char_to_read[i];
 							}
