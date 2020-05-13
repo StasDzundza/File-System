@@ -38,6 +38,7 @@ namespace filesystem::components {
 		for (int i = 0; i < FD_OPENED_LIMIT; i++) {
 			if (entries_buf[i].fd_index == -1) {
 				entries_buf[i] = new_file_entry;
+				oft_size++;
 				return i;
 			}
 		}
