@@ -94,15 +94,15 @@ namespace filesystem {
 					}
 				}
 				else if (command == "wr") {
-					int fd_index, count;
+					int oft_index, count;
 					char c;
-					if (!(ss >> fd_index, ss >> c, ss >> count) || !ss.eof()) {
+					if (!(ss >> oft_index, ss >> c, ss >> count) || !ss.eof()) {
 						_incorrectSyntax();
 					}
 					else {
 						char* char_to_write = new char[count];
 						std::fill(char_to_write, char_to_write + count, c);
-						if (fs.write(fd_index, char_to_write, count) != RetStatus::FAIL) {
+						if (fs.write(oft_index, char_to_write, count) != RetStatus::FAIL) {
 							std::cout << count << " bytes written" << std::endl;
 						}
 						else {

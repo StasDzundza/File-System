@@ -32,7 +32,7 @@ namespace filesystem {
 		int createFile(const char* filename);
 		int destroyFile(const char* filename);
 		int read(int oft_index, void* main_mem_ptr, int bytes);
-		int write(int fd_index, void* main_mem_ptr, int bytes);
+		int write(int oft_index, void* main_mem_ptr, int bytes);
 		int lseek(int fd_index, int pos);
 		int open(const char* filename);
 		int close(int oft_index);
