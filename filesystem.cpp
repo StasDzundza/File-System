@@ -430,11 +430,12 @@ namespace filesystem {
 		return RetStatus::OK;
 	}
 
-	int FileSystem::lseek(int fd_index, int pos)
+	int FileSystem::lseek(int oft_index, int pos)
 	{
-		int oft_index = oft.getOftIndex(fd_index);
-		if (oft_index == -1)
+		int fd_index = oft.getFDIndexByOftIndex(oft_index);
+		if (fd_index == -1) {
 			return RetStatus::FAIL;
+		}
 		OFTEntry* file_entry = oft.getFile(oft_index);
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
 		return _lseek(file_entry, fd, pos);

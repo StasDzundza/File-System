@@ -112,12 +112,12 @@ namespace filesystem {
 					}
 				}
 				else if (command == "sk") {
-					int fd_index, pos;
-					if (!(ss >> fd_index, ss >> pos) || !ss.eof()) {
+					int oft_index, pos;
+					if (!(ss >> oft_index, ss >> pos) || !ss.eof()) {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.lseek(fd_index, pos) == RetStatus::OK) {
+						if (fs.lseek(oft_index, pos) == RetStatus::OK) {
 							std::cout << "current position is " << pos << std::endl;
 						}
 						else {
