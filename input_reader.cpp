@@ -49,9 +49,9 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						int fd_index = fs.open(name.c_str());
-						if (fd_index != -1) {
-							std::cout << "file " << name << " opened, index = " << fd_index << std::endl;
+						int oft_index = fs.open(name.c_str());
+						if (oft_index != -1) {
+							std::cout << "file " << name << " opened, index = " << oft_index << std::endl;
 						}
 						else {
 							_error();

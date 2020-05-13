@@ -443,16 +443,16 @@ namespace filesystem {
 		}
 		int fd_index = file.first.fd_index;
 		int oft_index = oft.addFile(fd_index);
-		if (oft_index == -1) {
+		/*if (oft_index == -1) {
 			return -1;
 		}
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
-		/*if (fd.file_length != 0) {
+		if (fd.file_length != 0) {
 			OFTEntry* oft_entry = oft.getFile(oft_index);
 			ios.read_block(fd.arr_block_num[0], oft_entry->read_write_buffer);
 			oft_entry->block_read = true;
 		}*/
-		return fd_index;
+		return oft_index;
 	}
 
 	int FileSystem::close(int fd_index)
