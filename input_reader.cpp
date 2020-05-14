@@ -102,8 +102,9 @@ namespace filesystem {
 					else {
 						char* char_to_write = new char[count];
 						std::fill(char_to_write, char_to_write + count, c);
-						if (fs.write(oft_index, char_to_write, count) != RetStatus::FAIL) {
-							std::cout << count << " bytes written" << std::endl;
+						int count_write = fs.write(oft_index, char_to_write, count);
+						if (count_write != RetStatus::FAIL) {
+							std::cout << count_write << " bytes written" << std::endl;
 						}
 						else {
 							_error();

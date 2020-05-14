@@ -73,11 +73,11 @@ namespace filesystem {
 
 	int FileSystem::_readFromFile(OFTEntry* f_entry, const FileDescriptor& fd, void* write_ptr, int bytes) {
 		// Check if file has enough bytes to read
-		int count_bytes = bytes;
 		if (fd.file_length - f_entry->fpos < bytes) {
-			count_bytes = fd.file_length - f_entry->fpos;
+			bytes = fd.file_length - f_entry->fpos;
 		}
-		
+		int count_bytes = bytes;
+
 		char* write_to = static_cast<char*>(write_ptr);
 		int arr_block_idx = f_entry->fpos/BLOCK_SIZE, shift = f_entry->fpos % BLOCK_SIZE;
 		if (shift || f_entry->block_modified) {
@@ -129,6 +129,11 @@ namespace filesystem {
 	{
 		// before reading/writing blocks, we must ensure the file can store requsted bytes
 		// and allocate the necessary bytes
+		if (bytes + entry->fpos > BLOCK_SIZE* MAX_FILE_BLOCKS) {
+			bytes = BLOCK_SIZE * MAX_FILE_BLOCKS - entry->fpos;
+		}
+		int count_bytes = bytes;
+
 		int bytes_to_alloc = max(0, bytes - fd.file_length + entry->fpos);
 		if (_reserveBytesForFile(&fd, bytes_to_alloc) == RetStatus::FAIL) {
 			return RetStatus::FAIL;
@@ -172,7 +177,7 @@ namespace filesystem {
 				disk_utils::RawDiskWriter fout(&ios, fd_block_idx, fd_offset);
 				fout.write(&fd, sizeof(FileDescriptor));
 			}
-			return RetStatus::OK;
+			return count_bytes;
 		}
 	}
 
@@ -221,7 +226,7 @@ namespace filesystem {
 			}
 		}
 		else {
-			return RetStatus::OK;
+			return RetStatus::FAIL;
 		}
 	}
 
