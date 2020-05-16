@@ -49,9 +49,9 @@ namespace filesystem {
 						_incorrectSyntax();
 					}
 					else {
-						int fd_index = fs.open(name.c_str());
-						if (fd_index != -1) {
-							std::cout << "file " << name << " opened, index = " << fd_index << std::endl;
+						int oft_index = fs.open(name.c_str());
+						if (oft_index != -1) {
+							std::cout << "file " << name << " opened, index = " << oft_index << std::endl;
 						}
 						else {
 							_error();
@@ -59,13 +59,13 @@ namespace filesystem {
 					}
 				}
 				else if (command == "cl") {
-					int fd_index;
-					if (!(ss >> fd_index) || !ss.eof()) {
+					int oft_index;
+					if (!(ss >> oft_index) || !ss.eof()) {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.close(fd_index) == RetStatus::OK) {
-							std::cout << "file " << fd_index << " closed" <<  std::endl;
+						if (fs.close(oft_index) == RetStatus::OK) {
+							std::cout << "file " << oft_index << " closed" <<  std::endl;
 						}
 						else {
 							_error();
@@ -73,15 +73,16 @@ namespace filesystem {
 					}
 				}
 				else if (command == "rd") {
-					int fd_index, count;
-					if (!(ss >> fd_index, ss >> count) || !ss.eof()) {
+					int oft_index, count;
+					if (!(ss >> oft_index, ss >> count) || !ss.eof()) {
 						_incorrectSyntax();
 					}
 					else {
 						char* char_to_read = new char[count];
-						if (fs.read(fd_index, char_to_read, count) != RetStatus::FAIL) {
-							std::cout << count << " bytes read: ";
-							for (int i = 0; i < count; i++) {
+						int count_read = fs.read(oft_index, char_to_read, count);
+						if (count_read != RetStatus::FAIL) {
+							std::cout << count_read << " bytes read: ";
+							for (int i = 0; i < count_read; i++) {
 								std::cout << char_to_read[i];
 							}
 							std::cout << std::endl;
@@ -93,16 +94,17 @@ namespace filesystem {
 					}
 				}
 				else if (command == "wr") {
-					int fd_index, count;
+					int oft_index, count;
 					char c;
-					if (!(ss >> fd_index, ss >> c, ss >> count) || !ss.eof()) {
+					if (!(ss >> oft_index, ss >> c, ss >> count) || !ss.eof()) {
 						_incorrectSyntax();
 					}
 					else {
 						char* char_to_write = new char[count];
 						std::fill(char_to_write, char_to_write + count, c);
-						if (fs.write(fd_index, char_to_write, count) != RetStatus::FAIL) {
-							std::cout << count << " bytes written" << std::endl;
+						int count_write = fs.write(oft_index, char_to_write, count);
+						if (count_write != RetStatus::FAIL) {
+							std::cout << count_write << " bytes written" << std::endl;
 						}
 						else {
 							_error();
@@ -111,12 +113,12 @@ namespace filesystem {
 					}
 				}
 				else if (command == "sk") {
-					int fd_index, pos;
-					if (!(ss >> fd_index, ss >> pos) || !ss.eof()) {
+					int oft_index, pos;
+					if (!(ss >> oft_index, ss >> pos) || !ss.eof()) {
 						_incorrectSyntax();
 					}
 					else {
-						if (fs.lseek(fd_index, pos) == RetStatus::OK) {
+						if (fs.lseek(oft_index, pos) == RetStatus::OK) {
 							std::cout << "current position is " << pos << std::endl;
 						}
 						else {

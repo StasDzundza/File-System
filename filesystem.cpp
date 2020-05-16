@@ -74,8 +74,9 @@ namespace filesystem {
 	int FileSystem::_readFromFile(OFTEntry* f_entry, const FileDescriptor& fd, void* write_ptr, int bytes) {
 		// Check if file has enough bytes to read
 		if (fd.file_length - f_entry->fpos < bytes) {
-			return RetStatus::FAIL;
+			bytes = fd.file_length - f_entry->fpos;
 		}
+		int count_bytes = bytes;
 
 		char* write_to = static_cast<char*>(write_ptr);
 		int arr_block_idx = f_entry->fpos/BLOCK_SIZE, shift = f_entry->fpos % BLOCK_SIZE;
@@ -93,7 +94,7 @@ namespace filesystem {
             shift = (shift + prefix_size) % BLOCK_SIZE;
             if(shift) {
                 // bytes < BLOCK_SIZE - shift
-				return RetStatus::OK;
+				return count_bytes;
 			}
 		
 			if (f_entry->block_modified) {
@@ -121,13 +122,18 @@ namespace filesystem {
 			memcpy(write_to, f_entry->read_write_buffer, bytes);
 			f_entry->fpos += bytes; f_entry->block_read = true;
 		}
-		return RetStatus::OK;
+		return count_bytes;
 	}
 
 	int FileSystem::_writeToFile(OFTEntry* entry, FileDescriptor& fd, void* read_ptr, int bytes)
 	{
 		// before reading/writing blocks, we must ensure the file can store requsted bytes
 		// and allocate the necessary bytes
+		if (bytes + entry->fpos > BLOCK_SIZE* MAX_FILE_BLOCKS) {
+			bytes = BLOCK_SIZE * MAX_FILE_BLOCKS - entry->fpos;
+		}
+		int count_bytes = bytes;
+
 		int bytes_to_alloc = max(0, bytes - fd.file_length + entry->fpos);
 		if (_reserveBytesForFile(&fd, bytes_to_alloc) == RetStatus::FAIL) {
 			return RetStatus::FAIL;
@@ -171,7 +177,7 @@ namespace filesystem {
 				disk_utils::RawDiskWriter fout(&ios, fd_block_idx, fd_offset);
 				fout.write(&fd, sizeof(FileDescriptor));
 			}
-			return RetStatus::OK;
+			return count_bytes;
 		}
 	}
 
@@ -220,23 +226,25 @@ namespace filesystem {
 			}
 		}
 		else {
-			return RetStatus::OK;
+			return RetStatus::FAIL;
 		}
 	}
 
-	int FileSystem::read(int fd_index, void* main_mem_ptr, int bytes) {
-		int oft_index = oft.getOftIndex(fd_index);
-		if (bytes < 0 || oft_index == -1)
+	int FileSystem::read(int oft_index, void* main_mem_ptr, int bytes) {
+		int fd_index = oft.getFDIndexByOftIndex(oft_index);
+		if (bytes < 0 || fd_index == -1) {
 			return RetStatus::FAIL;
+		}
 		OFTEntry* file_entry = oft.getFile(oft_index);
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
 		return _readFromFile(file_entry, fd, main_mem_ptr, bytes);
 	}
 
-	int FileSystem::write(int fd_index, void* main_mem_ptr, int bytes) {
-		int oft_index = oft.getOftIndex(fd_index);
-		if (bytes < 0 || oft_index == -1)
+	int FileSystem::write(int oft_index, void* main_mem_ptr, int bytes) {
+		int fd_index = oft.getFDIndexByOftIndex(oft_index);
+		if (bytes < 0 || fd_index == -1) {
 			return RetStatus::FAIL;
+		}
 		OFTEntry* file_entry = oft.getFile(oft_index);
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
 		return _writeToFile(file_entry, fd, main_mem_ptr, bytes);
@@ -425,11 +433,12 @@ namespace filesystem {
 		return RetStatus::OK;
 	}
 
-	int FileSystem::lseek(int fd_index, int pos)
+	int FileSystem::lseek(int oft_index, int pos)
 	{
-		int oft_index = oft.getOftIndex(fd_index);
-		if (oft_index == -1)
+		int fd_index = oft.getFDIndexByOftIndex(oft_index);
+		if (fd_index == -1) {
 			return RetStatus::FAIL;
+		}
 		OFTEntry* file_entry = oft.getFile(oft_index);
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
 		return _lseek(file_entry, fd, pos);
@@ -443,22 +452,13 @@ namespace filesystem {
 		}
 		int fd_index = file.first.fd_index;
 		int oft_index = oft.addFile(fd_index);
-		if (oft_index == -1) {
-			return -1;
-		}
-		FileDescriptor fd = _getDescriptorByIndex(fd_index);
-		if (fd.file_length != 0) {
-			OFTEntry* oft_entry = oft.getFile(oft_index);
-			ios.read_block(fd.arr_block_num[0], oft_entry->read_write_buffer);
-			oft_entry->block_read = true;
-		}
-		return fd_index;
+		return oft_index;
 	}
 
-	int FileSystem::close(int fd_index)
+	int FileSystem::close(int oft_index)
 	{
-		int oft_index = oft.getOftIndex(fd_index);
-		if (oft_index == -1) {
+		int fd_index = oft.getFDIndexByOftIndex(oft_index);
+		if (fd_index == -1) {
 			return RetStatus::FAIL;
 		}
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
