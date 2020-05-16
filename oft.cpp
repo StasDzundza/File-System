@@ -29,7 +29,7 @@ namespace filesystem::components {
 	int OFT::addFile(int fd_index)
 	{
 		//file exists or no space in oft
-		if (oft_size >= FD_OPENED_LIMIT || getOftIndex(fd_index) >= 0) {
+		if (oft_size == FD_OPENED_LIMIT || getOftIndex(fd_index) >= 0) {
 			return -1;
 		}
 		OFTEntry new_file_entry;
@@ -47,7 +47,9 @@ namespace filesystem::components {
 
 	void OFT::removeOftEntry(int oft_index) {
 		entries_buf[oft_index].fd_index = -1;
-		//std::swap(entries_buf[oft_index], entries_buf[oft_size - 1]);
+		entries_buf[oft_index].block_modified = 0;
+		entries_buf[oft_index].block_read = 0;
+		entries_buf[oft_index].fpos = 0;
 		oft_size -= 1;
 	}
 
@@ -57,7 +59,7 @@ namespace filesystem::components {
 	}
 	int OFT::getFDIndexByOftIndex(int oft_index)
 	{
-		if (oft_index<0 || oft_index>FD_OPENED_LIMIT) {
+		if (oft_index < 0 || oft_index >= FD_OPENED_LIMIT) {
 			return -1;
 		}
 		return entries_buf[oft_index].fd_index;
