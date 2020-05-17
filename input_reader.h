@@ -9,7 +9,7 @@ namespace filesystem {
     class InputReader
     {
     public:
-        void start();
+        void start(int argc, char* argv[]);
     
     private:
         void _incorrectSyntax();

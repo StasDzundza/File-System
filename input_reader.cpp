@@ -1,15 +1,24 @@
 #include "input_reader.h"
 #include "utils/errors.h"
+#include <fstream>      // std::ifstream
 
 namespace filesystem {
 	using namespace errors;
 
-	void InputReader::start()
+	void InputReader::start(int argc, char* argv[])
 	{
+		std::istream *in=&std::cin;
+		if (argc == 2) {
+			in = new std::ifstream(argv[1]);
+		}
 		while (true)
 		{
 			std::string str;
-			std::getline(std::cin, str);
+			std::getline(*in, str);
+			if (argc == 2) {
+				if (str.size() == 0) exit(0);
+				std::cout << str << std::endl;
+			}
 
 			std::istringstream ss(str);
 			std::string command; 
