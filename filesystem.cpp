@@ -176,6 +176,7 @@ namespace filesystem {
             if (bytes == BLOCK_SIZE) {
                 ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
                 entry->block_read = false;
+                entry->block_modified = false;
             } else {
                 entry->block_read = true;
                 entry->block_modified = true;
@@ -310,13 +311,12 @@ namespace filesystem {
 			if (pos < 0 || pos > fd.file_length) {
 				return RetStatus::FAIL;
 			}
-			int cur_pos_disk_block = fd.arr_block_num[file_entry->fpos / BLOCK_SIZE];
-			int new_pos_disk_block = fd.arr_block_num[pos / BLOCK_SIZE];
-			if (cur_pos_disk_block != new_pos_disk_block) {
-				if (file_entry->block_modified) {
-					ios.write_block(cur_pos_disk_block, file_entry->read_write_buffer);
-				}
-				ios.read_block(new_pos_disk_block, file_entry->read_write_buffer);
+            int cur_idx = file_entry->fpos / BLOCK_SIZE, new_idx = pos / BLOCK_SIZE;
+            if (cur_idx != new_idx) {
+                if (file_entry->block_modified) {
+                    ios.write_block(fd.arr_block_num[cur_idx], file_entry->read_write_buffer);
+                }
+                ios.read_block(fd.arr_block_num[new_idx], file_entry->read_write_buffer);
 				file_entry->block_read = true;
 				file_entry->block_modified = false;
 			}
