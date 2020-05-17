@@ -35,7 +35,7 @@ namespace filesystem {
 	}
 
 	/*
-		Save filesystem data to disk: write bitmap, 
+		Save filesystem data to disk: write bitmap,
 		directory descriptor,empty file descriptors.
 	*/
 	void FileSystem::_initFileSystem() {
@@ -96,7 +96,7 @@ namespace filesystem {
                 // bytes < BLOCK_SIZE - shift
 				return count_bytes;
 			}
-		
+
 			if (f_entry->block_modified) {
 				// write the buffer into the appropriate block on disk (if modified),
 				ios.write_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
@@ -125,61 +125,76 @@ namespace filesystem {
 		return count_bytes;
 	}
 
-	int FileSystem::_writeToFile(OFTEntry* entry, FileDescriptor& fd, void* read_ptr, int bytes)
-	{
-		// before reading/writing blocks, we must ensure the file can store requsted bytes
-		// and allocate the necessary bytes
-		if (bytes + entry->fpos > BLOCK_SIZE* MAX_FILE_BLOCKS) {
-			bytes = BLOCK_SIZE * MAX_FILE_BLOCKS - entry->fpos;
-		}
-		int count_bytes = bytes;
+    int FileSystem::_writeToFile(OFTEntry *entry, FileDescriptor &fd, void *read_ptr, int bytes) {
+        // before reading/writing blocks, we must ensure the file can store requsted bytes
+        // and allocate the necessary bytes
+        if (bytes + entry->fpos > BLOCK_SIZE * MAX_FILE_BLOCKS) {
+            bytes = BLOCK_SIZE * MAX_FILE_BLOCKS - entry->fpos;
+        }
 
-		int bytes_to_alloc = max(0, bytes - fd.file_length + entry->fpos);
-		if (_reserveBytesForFile(&fd, bytes_to_alloc) == RetStatus::FAIL) {
-			return RetStatus::FAIL;
-		}
-		else {
-			char* read_from = static_cast<char*>(read_ptr);
-			int arr_block_idx = entry->fpos / BLOCK_SIZE, offset = entry->fpos % BLOCK_SIZE;
-			if (!entry->block_read) {
-				// if block isn't read yet, read the respective block
-				ios.read_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
-				entry->block_read = true; // block isn't modified for sure
-			}
+        int num_of_bytes_written = 0;
 
-			while (bytes + offset > BLOCK_SIZE) {
-				memcpy(entry->read_write_buffer + offset, read_from, BLOCK_SIZE - offset);
-				bytes -= BLOCK_SIZE - offset;
-				entry->fpos += BLOCK_SIZE - offset;
-				read_from += BLOCK_SIZE - offset;
-				offset = 0;
+        char *read_from = static_cast<char *>(read_ptr);
+        int arr_block_idx = entry->fpos / BLOCK_SIZE, offset = entry->fpos % BLOCK_SIZE;
+        int tmp_file_length = fd.file_length;
 
-				ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
-				arr_block_idx++;
-				ios.read_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
-			}
+        while (bytes + offset > BLOCK_SIZE) {
+            int bytes_to_alloc = max(0, BLOCK_SIZE - offset - fd.file_length + entry->fpos);
+            if (_reserveBytesForFile(&fd, bytes_to_alloc) == RetStatus::OK) {
+                if (!entry->block_read) {
+                    // if block isn't read yet, read the respective block
+                    ios.read_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
+                    entry->block_read = true;
+                }
+                memcpy(entry->read_write_buffer + offset, read_from, BLOCK_SIZE - offset);
+                num_of_bytes_written += BLOCK_SIZE - offset;
+                bytes -= BLOCK_SIZE - offset;
+                entry->fpos += BLOCK_SIZE - offset;
+                read_from += BLOCK_SIZE - offset;
+                offset = 0;
 
-			//if block space is enough - write data to buffer and don't write to disk
-			memcpy(entry->read_write_buffer + offset, read_from, bytes);
-			if (bytes == BLOCK_SIZE) {
-				ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
-				entry->block_read = false;
-			} else {
-				entry->block_read = true; entry->block_modified = true;
-			}
+                ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
+                arr_block_idx++;
+                entry->block_read = false;
+                if (entry->fpos > fd.file_length) {
+                    fd.file_length = entry->fpos;
+                }
+            } else {
+                break;
+            }
+        }
 
-			entry->fpos += bytes;
-			if (entry->fpos > fd.file_length) {
-				fd.file_length = entry->fpos;
-				int fd_shift = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor) * entry->fd_index;
-				int fd_block_idx = fd_shift / BLOCK_SIZE;
-				int fd_offset = fd_shift % BLOCK_SIZE;
-				disk_utils::RawDiskWriter fout(&ios, fd_block_idx, fd_offset);
-				fout.write(&fd, sizeof(FileDescriptor));
-			}
-			return count_bytes;
-		}
-	}
+        int bytes_to_alloc = max(0, bytes - fd.file_length + entry->fpos);
+        if (_reserveBytesForFile(&fd, bytes_to_alloc) == RetStatus::OK) {
+            if (!entry->block_read) {
+                // if block isn't read yet, read the respective block
+                ios.read_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
+                entry->block_read = true;
+            }
+            memcpy(entry->read_write_buffer + offset, read_from, bytes);
+            num_of_bytes_written += bytes;
+            if (bytes == BLOCK_SIZE) {
+                ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
+                entry->block_read = false;
+            } else {
+                entry->block_read = true;
+                entry->block_modified = true;
+            }
+            entry->fpos += bytes;
+        }
+
+        if (entry->fpos > tmp_file_length) {
+            fd.file_length = entry->fpos;
+            int fd_shift =
+                    sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor) * entry->fd_index;
+            int fd_block_idx = fd_shift / BLOCK_SIZE;
+            int fd_offset = fd_shift % BLOCK_SIZE;
+            disk_utils::RawDiskWriter fout(&ios, fd_block_idx, fd_offset);
+            fout.write(&fd, sizeof(FileDescriptor));
+        }
+
+        return num_of_bytes_written;
+    }
 
 	int FileSystem::_reserveBytesForFile(FileDescriptor* fd, int bytes)
 	{
@@ -364,7 +379,7 @@ namespace filesystem {
 	{
 		std::pair<DirectoryEntry, int> dir_entry_info = _findFileInDirectory(filename);
 		DirectoryEntry file_dir_entry = dir_entry_info.first;
-		//if not found with such filename in directory or file is open 
+		//if not found with such filename in directory or file is open
 		if (dir_entry_info.second == -1 || oft.getOftIndex(file_dir_entry.fd_index) != -1) {
 			return RetStatus::FAIL;
 		}
@@ -382,7 +397,7 @@ namespace filesystem {
 				free_blocks_set[fd.arr_block_num[i]] = 0;
 			}
 			bitset_is_modified = true;
-		}		
+		}
 
 		//free occupied file descriptor
 		int bytes = sizeof(std::bitset<DISC_BLOCKS_NUM>) + sizeof(components::FileDescriptor)*file_dir_entry.fd_index;
