@@ -64,65 +64,73 @@ namespace filesystem {
 	{
 		FileDescriptor dir_fd = _getDescriptorByIndex(0);
 		oft.addFile(0);
-		if (dir_fd.file_length > 0) {
-			OFTEntry *directory_oft = oft.getFile(0);
-			ios.read_block(dir_fd.arr_block_num[0], directory_oft->read_write_buffer);
-			directory_oft->block_read = true;
-		}
 	}
 
 	int FileSystem::_readFromFile(OFTEntry* f_entry, const FileDescriptor& fd, void* write_ptr, int bytes) {
-		// Check if file has enough bytes to read
-		if (fd.file_length - f_entry->fpos < bytes) {
-			bytes = fd.file_length - f_entry->fpos;
-		}
-		int count_bytes = bytes;
+        // Check if file has enough bytes to read
+        if (fd.file_length - f_entry->fpos < bytes) {
+            bytes = fd.file_length - f_entry->fpos;
+        }
+        int count_bytes = bytes;
 
-		char* write_to = static_cast<char*>(write_ptr);
-		int arr_block_idx = f_entry->fpos/BLOCK_SIZE, shift = f_entry->fpos % BLOCK_SIZE;
-		if (shift || f_entry->block_modified) {
-			if (!f_entry->block_read) {
-				// if block isn't read yet, read the respective block
-				ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
-				f_entry->block_read = true; // block isn't modified for sure
-			}
+        char* write_to = static_cast<char*>(write_ptr);
+        int arr_block_idx = f_entry->fpos/BLOCK_SIZE, shift = f_entry->fpos % BLOCK_SIZE;
+
+        if(f_entry->read_block_arr_idx != arr_block_idx){
+            if(f_entry->block_modified) {
+                ios.write_block(fd.arr_block_num[f_entry->read_block_arr_idx],f_entry->read_write_buffer);
+                f_entry->block_modified = false;
+            }
+            f_entry->block_read = false;
+            f_entry->read_block_arr_idx = -1;
+        }
+
+        if (shift || f_entry->block_modified) {
+            if (!f_entry->block_read) {
+                // if block isn't read yet, read the respective block
+                ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+                f_entry->block_read = true; // block isn't modified for sure
+                f_entry->read_block_arr_idx = arr_block_idx;
+            }
             int prefix_size = min(BLOCK_SIZE-shift, bytes);
-			memcpy(write_to, f_entry->read_write_buffer + shift, prefix_size);
-			write_to += prefix_size; bytes -= prefix_size;
+            memcpy(write_to, f_entry->read_write_buffer + shift, prefix_size);
+            write_to += prefix_size; bytes -= prefix_size;
 
-			f_entry->fpos += prefix_size;
+            f_entry->fpos += prefix_size;
             shift = (shift + prefix_size) % BLOCK_SIZE;
             if(shift) {
                 // bytes < BLOCK_SIZE - shift
-				return count_bytes;
-			}
+                return count_bytes;
+            }
 
-			if (f_entry->block_modified) {
-				// write the buffer into the appropriate block on disk (if modified),
-				ios.write_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
-				f_entry->block_modified = false;
-			}
-			arr_block_idx += 1; f_entry->block_read = false;
-		}
+            if (f_entry->block_modified) {
+                // write the buffer into the appropriate block on disk (if modified),
+                ios.write_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+                f_entry->block_modified = false;
+            }
+            arr_block_idx += 1;
+            f_entry->block_read = false; f_entry->read_block_arr_idx = -1;
+        }
 
-		// Left bytes to read
-		while (bytes >= BLOCK_SIZE) {
-			// Here we may use external call where we pass f_entry->read_write_buffer
-			ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
-			f_entry->fpos += BLOCK_SIZE; arr_block_idx += 1;
-			f_entry->block_read = true;
+        // Left bytes to read
+        while (bytes >= BLOCK_SIZE) {
+            // Here we may use external call where we pass f_entry->read_write_buffer
+            ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+            f_entry->fpos += BLOCK_SIZE; f_entry->read_block_arr_idx = arr_block_idx;
+            f_entry->block_read = true; arr_block_idx += 1;
 
-			memcpy(write_to, f_entry->read_write_buffer, BLOCK_SIZE);
-			write_to += BLOCK_SIZE; bytes -= BLOCK_SIZE;
-		}
+            memcpy(write_to, f_entry->read_write_buffer, BLOCK_SIZE);
+            write_to += BLOCK_SIZE; bytes -= BLOCK_SIZE;
+        }
 
-		if (bytes) {
-			// read remaining portion and buffer
-			ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
-			memcpy(write_to, f_entry->read_write_buffer, bytes);
-			f_entry->fpos += bytes; f_entry->block_read = true;
-		}
-		return count_bytes;
+        if (bytes) {
+            // read remaining portion and buffer
+            ios.read_block(fd.arr_block_num[arr_block_idx], f_entry->read_write_buffer);
+            memcpy(write_to, f_entry->read_write_buffer, bytes);
+            f_entry->fpos += bytes; f_entry->block_read = true;
+            f_entry->read_block_arr_idx = arr_block_idx;
+        }
+        return count_bytes;
 	}
 
     int FileSystem::_writeToFile(OFTEntry *entry, FileDescriptor &fd, void *read_ptr, int bytes) {
@@ -141,11 +149,20 @@ namespace filesystem {
         while (bytes + offset > BLOCK_SIZE) {
             int bytes_to_alloc = max(0, BLOCK_SIZE - offset - fd.file_length + entry->fpos);
             if (_reserveBytesForFile(&fd, bytes_to_alloc) == RetStatus::OK) {
-                if (!entry->block_read) {
-                    // if block isn't read yet, read the respective block
+                if (entry->read_block_arr_idx != arr_block_idx) {
+                    if(entry->block_modified){
+                        ios.write_block(fd.arr_block_num[entry->read_block_arr_idx],entry->read_write_buffer);
+                        entry->block_modified = false;
+                    }
+                    entry->block_read = false;
+                    entry->read_block_arr_idx = -1;
+                }
+                if(!entry->block_read){
                     ios.read_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
                     entry->block_read = true;
+                    entry->read_block_arr_idx = arr_block_idx;
                 }
+
                 memcpy(entry->read_write_buffer + offset, read_from, BLOCK_SIZE - offset);
                 num_of_bytes_written += BLOCK_SIZE - offset;
                 bytes -= BLOCK_SIZE - offset;
@@ -155,6 +172,7 @@ namespace filesystem {
 
                 ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
                 arr_block_idx++;
+                entry->block_modified = false;
                 entry->block_read = false;
                 if (entry->fpos > fd.file_length) {
                     fd.file_length = entry->fpos;
@@ -166,17 +184,25 @@ namespace filesystem {
 
         int bytes_to_alloc = max(0, bytes - fd.file_length + entry->fpos);
         if (_reserveBytesForFile(&fd, bytes_to_alloc) == RetStatus::OK) {
-            if (!entry->block_read) {
-                // if block isn't read yet, read the respective block
+            if (entry->read_block_arr_idx != arr_block_idx) {
+                if(entry->block_modified){
+                    ios.write_block(fd.arr_block_num[entry->read_block_arr_idx],entry->read_write_buffer);
+                    entry->block_modified = false;
+                }
+                entry->block_read = false;
+                entry->read_block_arr_idx = -1;
+            }
+            if(!entry->block_read){
                 ios.read_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
                 entry->block_read = true;
+                entry->read_block_arr_idx = arr_block_idx;
             }
             memcpy(entry->read_write_buffer + offset, read_from, bytes);
             num_of_bytes_written += bytes;
             if (bytes == BLOCK_SIZE) {
                 ios.write_block(fd.arr_block_num[arr_block_idx], entry->read_write_buffer);
-                entry->block_read = false;
                 entry->block_modified = false;
+                entry->block_read = true;
             } else {
                 entry->block_read = true;
                 entry->block_modified = true;
@@ -201,8 +227,6 @@ namespace filesystem {
 	{
 		//check if file can store requsted bytes
 		if (fd->file_length + bytes <= BLOCK_SIZE * MAX_FILE_BLOCKS) {
-			//int offset_in_last_block = fd->file_length % BLOCK_SIZE;
-			//bytes -= (BLOCK_SIZE - offset_in_last_block);
 			int num_of_occupied_blocks = (fd->file_length + BLOCK_SIZE - 1) / BLOCK_SIZE;
 			int available_allocated_bytes = num_of_occupied_blocks * BLOCK_SIZE - fd->file_length;
 			bytes -= available_allocated_bytes;
@@ -248,7 +272,7 @@ namespace filesystem {
 
 	int FileSystem::read(int oft_index, void* main_mem_ptr, int bytes) {
 		int fd_index = oft.getFDIndexByOftIndex(oft_index);
-		if (bytes < 0 || fd_index == -1) {
+		if (bytes <= 0 || fd_index == -1) {
 			return RetStatus::FAIL;
 		}
 		OFTEntry* file_entry = oft.getFile(oft_index);
@@ -258,7 +282,7 @@ namespace filesystem {
 
 	int FileSystem::write(int oft_index, void* main_mem_ptr, int bytes) {
 		int fd_index = oft.getFDIndexByOftIndex(oft_index);
-		if (bytes < 0 || fd_index == -1) {
+		if (bytes <= 0 || fd_index == -1) {
 			return RetStatus::FAIL;
 		}
 		OFTEntry* file_entry = oft.getFile(oft_index);
@@ -310,15 +334,6 @@ namespace filesystem {
 		if (file_entry != nullptr) {
 			if (pos < 0 || pos > fd.file_length) {
 				return RetStatus::FAIL;
-			}
-            int cur_idx = file_entry->fpos / BLOCK_SIZE, new_idx = pos / BLOCK_SIZE;
-            if (cur_idx != new_idx) {
-                if (file_entry->block_modified) {
-                    ios.write_block(fd.arr_block_num[cur_idx], file_entry->read_write_buffer);
-                }
-                ios.read_block(fd.arr_block_num[new_idx], file_entry->read_write_buffer);
-				file_entry->block_read = true;
-				file_entry->block_modified = false;
 			}
 			file_entry->fpos = pos;
 			return RetStatus::OK;
