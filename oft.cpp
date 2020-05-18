@@ -50,6 +50,7 @@ namespace filesystem::components {
 		entries_buf[oft_index].block_modified = 0;
 		entries_buf[oft_index].block_read = 0;
 		entries_buf[oft_index].fpos = 0;
+		entries_buf[oft_index].read_block_arr_idx = -1;
 		oft_size -= 1;
 	}
 
