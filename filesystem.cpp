@@ -494,7 +494,7 @@ namespace filesystem {
 		FileDescriptor fd = _getDescriptorByIndex(fd_index);
 		OFTEntry *file_entry = oft.getFile(oft_index);
 		if (file_entry->block_modified) {
-			ios.write_block(fd.arr_block_num[file_entry->fpos/BLOCK_SIZE], file_entry->read_write_buffer);
+			ios.write_block(fd.arr_block_num[file_entry->read_block_arr_idx], file_entry->read_write_buffer);
 		}
 		oft.removeOftEntry(oft_index);
 		return RetStatus::OK;
