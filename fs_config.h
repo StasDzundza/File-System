@@ -11,5 +11,5 @@ namespace filesystem::config {
 	const int MAX_FILENAME_LENGTH = 6;
 	const int MAX_FILE_BLOCKS = 3;       // 3 blocks per file
 
-	const char SYSTEM_PATH[] = "file1.txt";
+        const char SYSTEM_PATH[] = "file1.iso";
 }
