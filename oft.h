@@ -8,7 +8,7 @@ namespace filesystem::components {
 	struct OFTEntry {
 		OFTEntry();
 		char read_write_buffer[BLOCK_SIZE];
-		int fpos, fd_index;
+		int fpos, fd_index, read_block_arr_idx = -1;
 		bool block_read, block_modified;
 	};
 
