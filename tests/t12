@@ -1,0 +1,9 @@
+cr a
+op a
+wr 1 a 50
+wr 1 b 50
+wr 1 c 50
+sk 1 0
+cl 1
+op a
+rd 1 150
